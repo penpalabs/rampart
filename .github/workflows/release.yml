@@ -32,11 +32,11 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Frontend bundle is embedded into the binary by rust-embed. Build
       # it first so the release artifact is fully self-contained.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
