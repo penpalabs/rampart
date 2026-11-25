@@ -66,7 +66,7 @@ jobs:
           - { tag: arm64,  arch: linux/arm64, runner: ubuntu-24.04-arm }
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref }}
 
@@ -110,7 +110,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digest-${{ matrix.platform.tag }}
           path: /tmp/digests/*
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: /tmp/digests
           pattern: digest-*
@@ -193,7 +193,7 @@ jobs:
       # Verify: gh attestation verify oci://ghcr.io/<owner>/<repo>:<version> -R <owner>/<repo>
       - name: Attest build provenance
         if: inputs.tag != ''
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.digest }}
@@ -211,7 +211,7 @@ jobs:
 
       - name: Attest SBOM
         if: inputs.tag != ''
-        uses: actions/attest-sbom@v2
+        uses: actions/attest-sbom@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.digest }}

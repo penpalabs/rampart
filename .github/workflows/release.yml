@@ -42,13 +42,13 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
 
       # Frontend bundle is embedded into the binary by rust-embed. Build
       # it first so the release artifact is fully self-contained.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -94,7 +94,7 @@ jobs:
       # Signed SLSA build provenance for each binary; verify with
       # `gh attestation verify <file> -R <owner>/<repo>`.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/rampart-${{ matrix.target }}
 
@@ -112,7 +112,7 @@ jobs:
     name: sbom
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
       - name: Generate SBOM
