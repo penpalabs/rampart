@@ -18,6 +18,13 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
 ## [Unreleased]
 
 ### Security
+- **`lettre` 0.11.23 → 0.11.24** (SMTP for email channels and status-page
+  subscriber mail): fixes RUSTSEC-2026-0560 to -0565, including STARTTLS
+  response injection, SMTP command injection via missing dot-stuffing, mail to a
+  quoted local part going to a different address, and three panic / memory DoS
+  bugs triggered by a malicious server. Also `url` 2.5.8 → 2.5.9
+  (RUSTSEC-2026-0592, stack overflow on nested `blob:` URLs) and `cookie`
+  0.18.2 → 0.18.3 (RUSTSEC-2026-0594). Lockfile only.
 - **Frontend dev tooling:** `npm audit fix` clears all frontend advisories
   (vite 8.0.16 → 8.3.8, vitest 4.1.8 → 4.1.12, postcss, undici, source-map-js,
   nanoid). Lockfile only.
