@@ -2,7 +2,9 @@
 #
 # Triggers:
 #   - push to main           → publish :main + :sha-<short> (multi-arch)
-#   - push of a v* tag       → publish :<semver>, :<major.minor>, :latest
+#   - workflow_call with tag → publish :<semver>, :<major.minor>, :latest, then
+#                              sign (cosign keyless) and attest provenance + SBOM.
+#                              Called by release-please.yml when a release is cut.
 #   - workflow_dispatch      → publish :manual-<sha> (manual smoke push)
 #
 # All images are pushed to GHCR under the calling repo's namespace.
@@ -27,13 +29,19 @@ name: docker
 on:
   push:
     branches: [main]
-    tags:     ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.159.0)"
+        required: true
+        type: string
   workflow_dispatch:
 
 permissions:
-  contents:  read
-  packages:  write
-  id-token:  write
+  contents:     read
+  packages:     write
+  id-token:     write   # keyless signing + attestations (Sigstore)
+  attestations: write
 
 env:
   REGISTRY: ghcr.io
@@ -59,6 +67,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Log in to ${{ env.REGISTRY }}
         uses: docker/login-action@v4
@@ -138,11 +148,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ inputs.tag == '' }}
             type=sha,prefix=sha-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}},value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+            type=raw,value=latest,enable=${{ inputs.tag != '' }}
             type=raw,value=manual-${{ github.sha }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Create + push multi-arch manifest
@@ -167,3 +177,54 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             "${{ env.REGISTRY }}/${{ env.IMAGE }}:sha-$(echo '${{ github.sha }}' | cut -c1-7)"
+
+      # ── release only: sign + attest the published multi-arch image ──
+      - name: Resolve image digest
+        id: digest
+        if: inputs.tag != ''
+        run: |
+          set -euo pipefail
+          tag='${{ inputs.tag }}'
+          digest=$(docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE }}:${tag#v}" \
+                     --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # Signed SLSA build provenance, pushed to the registry next to the image.
+      # Verify: gh attestation verify oci://ghcr.io/<owner>/<repo>:<version> -R <owner>/<repo>
+      - name: Attest build provenance
+        if: inputs.tag != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate image SBOM
+        if: inputs.tag != ''
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest SBOM
+        if: inputs.tag != ''
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          sbom-path: sbom.spdx.json
+          push-to-registry: true
+
+      # Keyless cosign signature (Sigstore, GitHub OIDC identity).
+      # Verify: cosign verify ghcr.io/<owner>/<repo>:<version> \
+      #   --certificate-identity-regexp 'https://github.com/<owner>/<repo>/.github/workflows/.*' \
+      #   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Install cosign
+        if: inputs.tag != ''
+        uses: sigstore/cosign-installer@v3
+      - name: Sign image
+        if: inputs.tag != ''
+        run: cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}"

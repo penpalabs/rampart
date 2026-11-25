@@ -1,176 +1,116 @@
 # Releasing Rampart
 
-This document is the operating manual for cutting a release. It is the only place that needs reading when shipping a version — the rest of the repo is referenced by name from here.
-
-The goal: a release is **one line bumped, one tag pushed**.
-
----
-
-## Source of truth
-
-A single field drives the version everywhere:
-
-```toml
-# backend/Cargo.toml
-[workspace.package]
-version = "X.Y.Z"
-```
-
-That value flows through automatically:
-
-- **Every backend crate** inherits via `version.workspace = true`.
-- **The running binary** reads it through `env!("CARGO_PKG_VERSION")` in `rampart-api/src/routes/health.rs`.
-- **`/healthz`** returns it: `{"status":"alive","version":"X.Y.Z"}`.
-- **`/metrics`** interpolates it into `rampart_build_info{version="X.Y.Z"} 1`.
-- **The dashboard header pill** fetches it from `/healthz` at mount and renders `vX.Y.Z`.
-
-`frontend/package.json` carries its own `version` field (npm requires one) — keep it in lockstep with the workspace version. There is no code path that reads it, but it's the answer if a contributor types `npm version` looking for the current value.
+Releases are automated with [Release Please](https://github.com/googleapis/release-please).
+**Cutting a release = merging the open `release: vX.Y.Z` pull request.** Nothing else.
 
 ---
 
-## Semantic versioning
+## How it works
 
-| Bump  | When to use |
-| :---  | :--- |
-| **MAJOR** (`1.0.0`) | Breaking API change, schema migration that requires a manual operator step, or removal of a probe / channel kind. |
-| **MINOR** (`0.2.0`) | New probe kind, new notification channel, new endpoint, new dashboard view, new CLI flag — anything additive. |
-| **PATCH** (`0.1.1`) | Bug fix, security fix, dependency bump, docs, packaging, CI. |
+1. Every pull request is squash-merged, so its **title becomes the commit
+   message on `main`**. Titles follow [Conventional Commits](https://www.conventionalcommits.org/)
+   (enforced by the `pr-title` check):
 
-The version starts at `0.x.y` — under `1.0.0` we reserve the right to break a thing if the lesson learned is worth it, but every such break still bumps the MINOR. A breaking change without a MINOR bump is a bug.
+   | Title prefix | Release notes section | Version bump (0.x) |
+   | :--- | :--- | :--- |
+   | `security:` | 🔒 Security | patch |
+   | `feat:` | ✨ Features | minor |
+   | `fix:` | 🐞 Bug Fixes | patch |
+   | `perf:` | ⚡ Performance | patch |
+   | `deps:` | 📦 Dependencies | patch |
+   | `revert:` | ⏪ Reverts | patch |
+   | `docs:` | 📝 Documentation | patch |
+   | `refactor:` `test:` `ci:` `build:` `chore:` `style:` | hidden | — |
+   | any type with `!` (e.g. `feat(api)!:`) or a `BREAKING CHANGE:` footer | ⚠ BREAKING CHANGES | minor (while < 1.0) |
 
----
+   A scope is optional: `fix(notifier): …`.
 
-## Procedure
+2. On every push to `main`, the `release-please` workflow updates one open
+   pull request titled `release: vX.Y.Z`. It contains:
+   - the next version, computed from the titles above;
+   - the new `CHANGELOG.md` section, grouped by the sections above with a link to each PR;
+   - the version bump in `backend/Cargo.toml` (workspace), `backend/Cargo.lock`
+     (workspace crates), `frontend/package.json`, `frontend/package-lock.json`,
+     `version.txt` and `.release-please-manifest.json`.
 
-### 1. Decide the bump
+3. **Merge the release PR** (squash) when you want to ship. The workflow then:
+   - tags the merge commit `vX.Y.Z` and publishes the GitHub release with the
+     new CHANGELOG section as its notes;
+   - builds the binaries (Linux x86_64 / aarch64, macOS x86_64 / aarch64) and
+     attaches them with SHA-256 sums, signed build-provenance attestations and
+     an SPDX SBOM;
+   - publishes the multi-arch image to `ghcr.io/<owner>/rampart` as `X.Y.Z`,
+     `X.Y` and `latest`, signed with cosign (keyless) and carrying provenance
+     and SBOM attestations;
+   - publishes the Helm chart to `oci://ghcr.io/<owner>/charts`;
+   - appends a 🙌 Contributors section (with first-time contributors) to the
+     release notes.
 
-Read [`CHANGELOG.md`](../CHANGELOG.md)'s `[Unreleased]` section. Pick MAJOR / MINOR / PATCH per the table above. If `[Unreleased]` is empty, there is nothing to release.
-
-### 2. Bump the version
-
-```bash
-# Replace 0.2.0 with the new version.
-sed -i '' 's/^version      = "[^"]*"$/version      = "0.2.0"/' backend/Cargo.toml
-sed -i ''   's/"version": "[^"]*"/"version": "0.2.0"/'        frontend/package.json
-cd backend && cargo update --workspace --offline   # refresh Cargo.lock metadata
-```
-
-Confirm nothing else moved:
-
-```bash
-git diff --stat
-# Expect exactly: backend/Cargo.toml | backend/Cargo.lock | frontend/package.json
-```
-
-### 3. Promote `[Unreleased]` to a versioned section
-
-In [`CHANGELOG.md`](../CHANGELOG.md):
-
-1. Rename the `## [Unreleased]` heading to `## [X.Y.Z] — YYYY-MM-DD`.
-2. Insert a fresh empty `## [Unreleased]` block above it.
-3. Update the link references at the bottom — add a new `[X.Y.Z]` line pointing to the tag, and point `[Unreleased]` at the new compare range:
-
-   ```markdown
-   [Unreleased]: https://github.com/pen-pal/rampart/compare/vX.Y.Z...HEAD
-   [X.Y.Z]:      https://github.com/pen-pal/rampart/releases/tag/vX.Y.Z
-   ```
-
-### 4. Verify locally
-
-```bash
-# Backend
-cd backend
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
-DATABASE_URL=postgres://rampart:rampart@localhost:5432/rampart cargo test --workspace
-cargo deny check
-
-# Frontend
-cd ../frontend
-npm ci
-npm test
-npm run build
-```
-
-Run the binary and curl `/healthz` to confirm the version you just bumped is what comes out the other end:
-
-```bash
-cd backend && cargo run -p rampart-api &
-sleep 5 && curl -s http://localhost:3000/healthz | jq .
-# {"status":"alive","version":"X.Y.Z"}
-```
-
-### 5. Commit and tag
-
-One commit, one tag, both signed:
-
-```bash
-git add backend/Cargo.toml backend/Cargo.lock frontend/package.json CHANGELOG.md
-git commit -m "release: vX.Y.Z"
-git tag -s vX.Y.Z -m "Rampart vX.Y.Z
-
-<paste the changelog section for this version here>
-"
-git push origin main
-git push origin vX.Y.Z
-```
-
-### 6. Cut the GitHub release
-
-```bash
-gh release create vX.Y.Z \
-  --title "Rampart vX.Y.Z" \
-  --notes-file <(awk "/^## \[X.Y.Z\]/,/^## \[/" CHANGELOG.md | sed '$d')
-```
-
-The release body should be the same content that landed in the changelog section — the changelog is authoritative; the GitHub release page is a mirror.
-
-### 7. Build + publish artifacts
-
-The release tag triggers `.github/workflows/release.yml` which builds:
-
-- The static binary (Linux x86_64, Linux aarch64, macOS x86_64, macOS aarch64) and uploads each as a release asset.
-- A multi-arch Docker image to `ghcr.io/pen-pal/rampart:X.Y.Z` and `ghcr.io/pen-pal/rampart:latest`.
-
-If the workflow fails, fix forward — don't move the tag.
+The version lives in `[workspace.package].version` in `backend/Cargo.toml` and
+reaches the binary through `env!("CARGO_PKG_VERSION")` (`/healthz`, `/metrics`,
+the dashboard header). Never bump it by hand; Release Please does.
 
 ---
 
-## Patch a previous release
+## Upgrade notes
 
-Sometimes a security fix needs to land on the prior MINOR without picking up unreleased work. The flow:
+When a release needs operator action (a behaviour change, a manual migration
+step), say so in the PR that introduces it:
 
-```bash
-git checkout -b release/X.Y vX.Y.0          # branch off the tag
-git cherry-pick <fix-commit>
-# bump backend/Cargo.toml + frontend/package.json to X.Y.1
-# update CHANGELOG.md with a new [X.Y.1] section, mention the fix
-git commit -am "release: vX.Y.1"
-git tag -s vX.Y.1
-git push origin release/X.Y vX.Y.1
-```
-
-Then forward-port the fix to `main` separately. Don't try to share the commit between branches — cherry-picking keeps the history honest.
+- mark it breaking (`feat(x)!:` or a `BREAKING CHANGE: <what to do>` footer in
+  the squash commit body); the text appears under ⚠ BREAKING CHANGES, or
+- after the release is published, add an **Upgrade notes** paragraph at the top
+  of the GitHub release (the release body is editable), and if needed the same
+  paragraph to its `CHANGELOG.md` section in a follow-up `docs:` PR.
 
 ---
 
-## What `[Unreleased]` should look like
+## Choosing the version
 
-Categorise entries under sub-headings — only include the ones that apply for a given release:
+Release Please picks the version from the titles (table above). To override it,
+merge a PR into `main` whose squash commit body ends with this footer (for
+example an empty `chore: release 0.160.0` commit); the release PR updates to
+that version:
 
-- **Added** — new probe / channel / endpoint / view / flag.
-- **Changed** — observable behaviour different from the previous version.
-- **Deprecated** — still works but is on the way out; planned removal version called out.
-- **Removed** — gone in this release.
-- **Fixed** — bug fix.
-- **Security** — CVE / advisory addressed; cross-reference [`docs/SECURITY-DEBT.md`](SECURITY-DEBT.md) if applicable.
-
-Write entries in the present tense, with enough context for a reader who has never touched the codebase to understand the impact. Reference issue / PR numbers where they add signal.
-
-```markdown
-### Added
-- New `radius` probe kind exercises RFC 2865 Access-Request → Accept/Reject against a RADIUS server (#211).
-
-### Fixed
-- Heartbeats list now paginates via an `?before=<rfc3339>` cursor instead of a 50-row hard cap. Detail-view "Load older" now keeps going past the first page (#214).
 ```
+Release-As: 0.160.0
+```
+
+---
+
+## Verifying a release
+
+```bash
+# Binary provenance
+gh attestation verify rampart-x86_64-unknown-linux-gnu -R <owner>/rampart
+
+# Image provenance + signature
+gh attestation verify oci://ghcr.io/<owner>/rampart:X.Y.Z -R <owner>/rampart
+cosign verify ghcr.io/<owner>/rampart:X.Y.Z \
+  --certificate-identity-regexp 'https://github.com/<owner>/rampart/.github/workflows/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Version baked into the binary
+curl -s http://localhost:3000/healthz   # {"status":"alive","version":"X.Y.Z"}
+```
+
+---
+
+## Fixing a release
+
+- **A build job failed:** fix forward on `main`, then rebuild the assets for the
+  existing tag with *Actions → release → Run workflow* (input: the tag). Don't
+  move or delete published tags.
+- **A bad release shipped:** merge the fix with a `fix:` title; the next release
+  PR picks it up. Mark the broken release's notes on GitHub if users must skip it.
+
+---
+
+## Tokens
+
+The workflow works with the default `GITHUB_TOKEN`. With it, the release PR
+gets no CI run, because GitHub doesn't trigger workflows from changes made with
+that token. That's acceptable: the release PR only changes version metadata.
+To have CI run on release PRs too, add a repository secret
+`RELEASE_PLEASE_TOKEN` (a GitHub App or fine-grained token with
+`contents: write` and `pull-requests: write`); the workflow uses it when present.

@@ -1,0 +1,156 @@
+# Release automation.
+#
+# On every push to main, Release Please keeps one "release: vX.Y.Z" pull
+# request up to date: it computes the next version from the Conventional
+# Commit titles merged since the last release, writes the CHANGELOG section
+# and bumps the version files (see release-please-config.json).
+#
+# Merging that pull request is the whole release:
+#   1. Release Please tags the merge commit and publishes the GitHub release
+#      (notes = the new CHANGELOG section).
+#   2. This workflow then builds and attaches the binaries, publishes the
+#      Docker image and the Helm chart, and appends contributor credits.
+#
+# Tags and releases created with the default GITHUB_TOKEN do not trigger
+# other workflows, so the build workflows are called directly from here
+# (workflow_call) instead of listening for tag pushes.
+#
+# Optional: add a repository secret RELEASE_PLEASE_TOKEN (a GitHub App or
+# fine-grained token with contents + pull-requests write). With it, CI runs on
+# the release PR like on any other PR; without it, GITHUB_TOKEN is used and
+# the release PR gets no CI run (its only changes are version metadata).
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      pr: ${{ steps.rp.outputs.pr }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  # Release Please's TOML updater can't select entries inside Cargo.lock's
+  # package array, so set the workspace crates' versions there ourselves and
+  # commit to the release PR branch. Only the eight rampart-* entries change.
+  sync-cargo-lock:
+    needs: release-please
+    if: needs.release-please.outputs.pr && needs.release-please.outputs.release_created != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Set workspace crate versions in Cargo.lock
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+          version = json.loads(pathlib.Path(".release-please-manifest.json").read_text())["."]
+          lock = pathlib.Path("backend/Cargo.lock")
+          text = lock.read_text()
+          new, n = re.subn(
+              r'(\[\[package\]\]\nname = "rampart-[a-z-]+"\nversion = ")[^"]+(")',
+              lambda m: m.group(1) + version + m.group(2),
+              text,
+          )
+          if n != 8:
+              raise SystemExit(f"expected 8 rampart-* entries in Cargo.lock, found {n}")
+          lock.write_text(new)
+          PY
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "Cargo.lock already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -s -am "chore(release): sync Cargo.lock workspace versions"
+          git push
+
+  binaries:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+  image:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+  chart:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/helm.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    permissions:
+      contents: read
+      packages: write
+
+  # Credit the people behind the release: append the contributors (from
+  # GitHub's generated notes for the same tag range) to the release body.
+  # GitHub renders @-mentioned users as an avatar row on the release page.
+  contributors:
+    needs: [release-please, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Append contributors to the release notes
+        run: |
+          set -euo pipefail
+          prev=$(gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --limit 20 --json tagName \
+                   --jq "[.[].tagName | select(. != \"$TAG\")][0] // empty")
+          args=(-f "tag_name=$TAG")
+          [ -n "$prev" ] && args+=(-f "previous_tag_name=$prev")
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body > generated.md
+          users=$(grep -oE 'by @[A-Za-z0-9-]+' generated.md | sed 's/^by //' | sort -u | paste -sd ' ' - || true)
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+          if grep -q '^### 🙌 Contributors' notes.md; then
+            echo "contributors already present"; exit 0
+          fi
+          {
+            echo
+            echo "### 🙌 Contributors"
+            echo
+            if [ -n "$users" ]; then
+              echo "Thanks to ${users// /, } for this release."
+            fi
+            sed -n '/^## New Contributors/,$p' generated.md
+            grep -q '^## New Contributors' generated.md || grep -E '^\*\*Full Changelog\*\*' generated.md || true
+          } >> notes.md
+          gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes-file notes.md
