@@ -199,10 +199,10 @@ The full CI gate runs all of the above on push + PR — see [`.github/workflows/
 
 - **Branch from `main`.** Name it `kind/short-description` (e.g., `probe/dns`, `fix/scheduler-leak`, `docs/sqlx-cache`).
 - **One concern per PR.** A feature and a refactor must go in separate PRs.
-- **Commit messages:** Short imperative subject (≤70 chars), body explains the *why*. Reference issues like `Fixes #42` when applicable.
+- **PR title = Conventional Commit.** PRs are squash-merged, so the title becomes the commit on `main` and feeds the release notes: `fix(notifier): …`, `feat(checker): …`, `security(api): …`, `deps: …`, `docs: …` (full list and version effects in [`docs/RELEASING.md`](docs/RELEASING.md); the `pr-title` check enforces it). Mark breaking changes with `!` (`feat(api)!: …`). Keep commit bodies explaining the *why*, and reference issues like `Fixes #42`.
 - **No `--no-verify`.** If a git hook fails, fix the underlying issue.
-- **Don't bump versions** in PRs — that's done at release time. The release procedure (single-line bump in `[workspace.package].version`, tag, GitHub release, artifact build) is documented in [`docs/RELEASING.md`](docs/RELEASING.md).
-- **Add a changelog entry.** Drop a one-line note under the appropriate sub-heading (`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`) of the `## [Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md). The maintainer cuts the section into a versioned block when the release goes out — your PR doesn't need to pick the version number.
+- **Don't bump versions** in PRs. Release Please bumps them in its `release: vX.Y.Z` PR; merging that PR tags, releases and builds everything (see [`docs/RELEASING.md`](docs/RELEASING.md)).
+- **Don't edit `CHANGELOG.md`.** It is generated from PR titles when a release is cut (Release Please). If your change needs operator action on upgrade, say so in the PR description so it can go into the release's upgrade notes.
 
 ---
 

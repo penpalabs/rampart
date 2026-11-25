@@ -1,0 +1,40 @@
+# Pull request titles become the commit messages on main (squash merge), and
+# Release Please builds the version bump and release notes from them. This
+# check keeps every title in Conventional Commits form, e.g.
+#   fix(notifier): strip URLs from channel errors
+#   feat(checker): add an etcd probe
+#   security(api): validate monitor refs are in-org
+# Breaking changes: add "!" after the type, e.g. "feat(api)!: ...".
+name: pr-title
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            security
+            feat
+            fix
+            perf
+            deps
+            revert
+            docs
+            refactor
+            test
+            ci
+            build
+            chore
+            style
+            release
+          requireScope: false

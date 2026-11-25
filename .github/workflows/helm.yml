@@ -21,8 +21,13 @@ on:
       - charts/**
       - .github/workflows/helm.yml
     tags:
-      - "v*"
-      - "chart-v*"
+      - "chart-v*"   # chart-only releases; app releases call this via workflow_call
+  workflow_call:
+    inputs:
+      tag:
+        description: "App release tag (e.g. v0.159.0)"
+        required: true
+        type: string
   workflow_dispatch:
 
 permissions:
@@ -33,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: azure/setup-helm@v4
         with:
           version: v3.16.3
@@ -54,8 +61,8 @@ jobs:
             >/dev/null
 
   publish:
-    # Only on a tag push or manual dispatch — never on PRs.
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    # Only on a chart tag, an app release (workflow_call) or manual dispatch — never on PRs.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || inputs.tag != ''
     needs: lint
     runs-on: ubuntu-latest
     permissions:
@@ -63,6 +70,8 @@ jobs:
       packages: write   # push the OCI chart to ghcr.io
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: azure/setup-helm@v4
         with:
           version: v3.16.3

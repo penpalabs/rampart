@@ -1,19 +1,29 @@
-# Build standalone binaries on a version tag and attach them to a GitHub
-# Release. The container image is published separately by docker.yml on
-# the same tag — this workflow is for people who run the bare binary.
+# Build the standalone binaries for a release and attach them, with
+# SHA-256 sums, build-provenance attestations and an SBOM, to the GitHub
+# release that Release Please already published (see release-please.yml,
+# which calls this workflow). The release notes come from Release Please;
+# this workflow only adds assets.
+#
+# Manual rebuild of an existing release: Actions -> release -> Run workflow.
 name: release
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to build (e.g. v0.159.0)"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build (e.g. v0.4.0). Used for the manual path."
+        description: "Existing release tag to rebuild (e.g. v0.159.0)"
         required: true
 
 permissions:
-  contents: write   # create the release + upload assets
+  contents: write       # upload release assets
+  id-token: write       # sign build-provenance attestations (Sigstore)
+  attestations: write   # store attestations
 
 jobs:
   build:
@@ -33,6 +43,8 @@ jobs:
             os: macos-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
 
       # Frontend bundle is embedded into the binary by rust-embed. Build
       # it first so the release artifact is fully self-contained.
@@ -79,26 +91,39 @@ jobs:
           cp "$BIN" "dist/${OUT}"
           (cd dist && shasum -a 256 "${OUT}" > "${OUT}.sha256")
 
-      # Use the curated CHANGELOG section for this version as the release
-      # body (the changelog is authoritative; the release page mirrors it —
-      # see docs/RELEASING.md). Falls back to a stub if the section is missing.
-      - name: Extract changelog notes
-        shell: bash
-        run: |
-          VER="${{ github.event.inputs.tag || github.ref_name }}"
-          VER="${VER#v}"
-          awk -v v="$VER" '
-            $0 ~ ("^## \\[" v "\\]") {f=1; next}
-            f && /^## \[/ {exit}
-            f {print}
-          ' CHANGELOG.md > "$RUNNER_TEMP/relnotes.md"
-          [ -s "$RUNNER_TEMP/relnotes.md" ] || echo "Rampart $VER" > "$RUNNER_TEMP/relnotes.md"
+      # Signed SLSA build provenance for each binary; verify with
+      # `gh attestation verify <file> -R <owner>/<repo>`.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/rampart-${{ matrix.target }}
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: |
-            dist/rampart-${{ matrix.target }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ inputs.tag }}" -R "$GITHUB_REPOSITORY" --clobber \
+            dist/rampart-${{ matrix.target }} \
             dist/rampart-${{ matrix.target }}.sha256
-          body_path: ${{ runner.temp }}/relnotes.md
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+
+  # Software bill of materials for the source tree (Cargo + npm dependencies),
+  # attached to the release as SPDX JSON.
+  sbom:
+    name: sbom
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: rampart-${{ inputs.tag }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Upload SBOM to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" -R "$GITHUB_REPOSITORY" --clobber "rampart-${{ inputs.tag }}.spdx.json"

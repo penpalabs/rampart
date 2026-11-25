@@ -11,11 +11,9 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 The version baked into the binary (and surfaced on `/healthz` + the dashboard header) is the single source of truth — it inherits from `[workspace.package].version` in `backend/Cargo.toml`. Frontend `package.json` tracks the same value.
 
-For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
-
----
-
-## [Unreleased]
+From v0.158.0 on, this file is maintained by [Release Please](https://github.com/googleapis/release-please):
+entries are generated from Conventional Commit pull-request titles when a release PR is merged.
+Don't edit it by hand in feature PRs. For the release procedure see [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ---
 
@@ -6843,7 +6841,6 @@ Full rationale in [`docs/DESIGN-ORIGINAL.md`](docs/DESIGN-ORIGINAL.md).
 
 ---
 
-[Unreleased]: https://github.com/penpalabs/rampart/compare/v0.158.0...HEAD
 [0.158.0]: https://github.com/penpalabs/rampart/releases/tag/v0.158.0
 [0.99.3]:     https://github.com/pen-pal/rampart/releases/tag/v0.99.3
 [0.99.2]:     https://github.com/pen-pal/rampart/releases/tag/v0.99.2
