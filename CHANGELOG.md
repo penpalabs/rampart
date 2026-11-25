@@ -17,36 +17,54 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
+---
+
+## [0.158.0] — 2026-11-25
+
+A security and stability release, and the first since CI was restored: from
+2026-06-23 until #95 the CI workflow did not parse, so no lint, test or e2e job
+ran. Everything below has been through the full CI matrix (Postgres, SQLite and
+MySQL suites, clippy, `cargo deny`, CodeQL, e2e on Chromium, Firefox, WebKit,
+Chrome and Edge).
+
+Merged: #95, #96, #97, #98, #99, #100, #101, #102, #113.
+
+### Upgrade notes
+- **Silences now mute ordinary monitor alerts.** Before, a silence muted SLO,
+  rule and escalation alerts but not a monitor's own up/down alert. If you rely
+  on an active silence while still expecting monitor pages, remove or narrow it.
+  Global silences also now apply only to their own org.
+- **SQLite / MySQL with `RAMPART_SECRET_KEY` set:** credential settings were
+  stored unencrypted. They are encrypted on their next save, so re-save the SMTP
+  and SIEM settings and rotate the telemetry token after upgrading.
+- **MySQL installs that tried to boot on ≤ 0.157.31** are stuck on migration 22
+  (`migration 22 is partially applied`). Run the two-statement cleanup in
+  `docs/SETUP.md` → "MySQL: migration 22 stuck", then restart.
+- **SQLite / MySQL:** endpoints that still need Postgres (telemetry ingest,
+  heartbeat rollups, per-API-key rate limiting) now answer **501
+  `unsupported`** instead of crashing the process.
+- **Self-telemetry (`RAMPART_OTLP_ENDPOINT`)** works again; it panicked at
+  startup with the updated OpenTelemetry crates before the fix in this release.
+- No database migrations need manual steps on Postgres.
+
 ### Security
-- **`lettre` 0.11.23 → 0.11.24** (SMTP for email channels and status-page
-  subscriber mail): fixes RUSTSEC-2026-0560 to -0565, including STARTTLS
-  response injection, SMTP command injection via missing dot-stuffing, mail to a
-  quoted local part going to a different address, and three panic / memory DoS
-  bugs triggered by a malicious server. Also `url` 2.5.8 → 2.5.9
-  (RUSTSEC-2026-0592, stack overflow on nested `blob:` URLs) and `cookie`
-  0.18.2 → 0.18.3 (RUSTSEC-2026-0594). Lockfile only.
-- **Frontend dev tooling:** `npm audit fix` clears all frontend advisories
-  (vite 8.0.16 → 8.3.8, vitest 4.1.8 → 4.1.12, postcss, undici, source-map-js,
-  nanoid). Lockfile only.
-- **Example demo apps:** OpenTelemetry JS bumped to the current SDK
-  (`sdk-node` 0.57 → 0.301, `auto-instrumentations-node` 0.56 → 0.83,
-  `resources` / `sdk-logs` → 3.x), clearing the Prometheus-exporter crash
-  advisories. `otel.js` moved to the new APIs (`resourceFromAttributes`, logs
-  API in `@opentelemetry/api`, log processor passed into the `NodeSDK`). Traces
-  verified end to end against a local Rampart. Known, pre-existing: the
-  `demo-app` backend's OTLP logs don't arrive in Rampart (0 on the old versions
-  too); not fixed here.
-- **Rust OpenTelemetry 0.30 → 0.33** (`opentelemetry`, `_sdk`, `-otlp`,
-  `-appender-tracing`, `-proto`; `tracing-opentelemetry` 0.31 → 0.34). Clears
-  GHSA-w9wp-h8wv-79jx (unbounded `baggage` header parsing). Not reachable in
-  Rampart, which never extracts inbound propagation headers, but the bump was
-  clean. `rampart-api` now uses the workspace `prost` (0.14) to match
-  `opentelemetry-proto`.
-- **Self-telemetry no longer panics at startup.** With `RAMPART_OTLP_ENDPOINT`
-  set, `init_tracing()` built the OTLP exporter's HTTP client before `main`
-  installed the ring crypto provider; on the new exporter that panics with
-  "No provider set". The provider is now installed first. Verified: Rampart
-  exporting to itself ingests its own spans and logs.
+- **A single request could kill the server on the SQLite / MySQL backends.**
+  `AppState::pool()` `.expect()`-panicked when there is no Postgres pool, and 175
+  not-yet-ported `SqliteStore` methods were `unimplemented!()` stubs. The release
+  profile is `panic = "abort"`, so any request reaching one took the whole
+  process down — including the dashboard's first call
+  (`GET /v1/monitors/summary`), the `/readyz` probe, the `/metrics` scrape, and
+  the unauthenticated ingest endpoints (OTLP / RUM / syslog / profiles /
+  Prometheus remote-write). Now `pool()` and every stub return
+  `DbError::Unsupported`, surfaced as **501** `{"error":{"code":"unsupported"}}`.
+  The heartbeat reads behind the dashboard, monitor detail, status-page latency,
+  test-now, and the GDPR session/recovery-code cleanup moved onto the `Store`
+  seam, so they now work on every backend instead of erroring. `/readyz` does a
+  Store round-trip off Postgres; `/metrics` omits the pool gauges there; the
+  per-API-key rate limiter fails open without a pool (as it already did on a
+  counter error). Postgres behaviour is unchanged. Regression test
+  `tests/sqlite_backend.rs` drives the real router over a SQLite store and now
+  runs in the `backend-sqlite` CI job.
 - **Channel credentials leaked into logs and the delivery log on network
   errors.** Many channels carry their secret in the request URL because the
   provider requires it there (Slack / Discord webhook URLs, Telegram bot tokens,
@@ -56,15 +74,6 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
   reqwest error (covers every channel), and per-monitor result webhooks do the
   same. Found while triaging CodeQL `rust/cleartext-transmission`; the transport
   itself was already HTTPS. Test: `network_error_text_omits_the_request_url`.
-- **RADIUS probe no longer falls back to a fixed `probe` / `probe` password**
-  when none is configured; it sends a random one. Access-Reject still counts as
-  Up, and a fixed pair could have matched a real account.
-- **Examples:** the `everything` webhook sink echoed the request method and path
-  into its HTML page unescaped (reflected XSS); all request-derived values are
-  now escaped. Both demo backends rate-limit `/api` per IP (600/min, well above
-  the demo pages' polling).
-- CodeQL `rust/hard-coded-cryptographic-value` in `secrets.rs`: the fixed keys
-  were test-only; the tests now generate keys.
 - **SMTP password and other credential settings were stored unencrypted on
   SQLite and MySQL**, even with `RAMPART_SECRET_KEY` set, while startup logged
   that credentials were encrypted at rest. Postgres seals the credential-bearing
@@ -75,24 +84,6 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
   SIEM settings (or rotate the telemetry token) to encrypt them. Regression test
   `rampart-db/tests/settings_secrets.rs` (fails without the fix: the SMTP
   password appears in the stored column) runs in both backend CI jobs.
-- **Dependency refresh: 32 of 41 RustSec advisories cleared.** `cargo deny` has
-  failed on `main` since 2026-07-07. A semver-compatible `cargo update` (220
-  lockfile packages, no manifest change) fixes advisories in `anyhow`,
-  `crossbeam-epoch`, `ctutils`, `h2`, `hickory-net` / `-proto` / `-resolver`
-  (DNSSEC validation, malformed-packet panics, unbounded retries), `rustls`
-  0.23, `rustls-webpki` 0.103, `tokio`, `webpki-roots` and `webpki-root-certs`.
-  Notable bumps: tokio 1.52.3 → 1.54.1, rustls 0.23.40 → 0.23.46, hickory
-  0.26.1 → 0.26.3, hyper 1.10 → 1.12.
-- **MQTT / NATS probes moved to rustls 0.23.** `rumqttc` 0.24 → 0.25 with
-  `use-rustls-no-provider` (no aws-lc-rs) and `async-nats` 0.36 → 0.52
-  (`ring`) drop `rustls` 0.22 from the tree. No probe code changes; both
-  re-tested against live brokers, including TLS with real certificate
-  verification.
-- **`cargo deny` green again.** The 7 remaining advisories have no fixed
-  release reachable without breaking the pure-Rust build or a major crypto
-  bump; each is documented with reachability and a fix path in
-  `docs/SECURITY-DEBT.md` and listed in `deny.toml`. Owner review requested.
-
 - **Silences: closed the remaining cross-org mute, and made silences actually
   mute monitor alerts.** Two gaps in the same feature:
   1. A *global* silence still muted rule, error and escalation alerts in **every**
@@ -111,30 +102,67 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
   (the documented intent), and metric-SLO alerts are muted by their own org's
   global silence (they previously slipped past it). Postgres, MySQL and SQLite;
   tests assert cross-org isolation via both monitor and channel.
-- **A single request could kill the server on the SQLite / MySQL backends.**
-  `AppState::pool()` `.expect()`-panicked when there is no Postgres pool, and 175
-  not-yet-ported `SqliteStore` methods were `unimplemented!()` stubs. The release
-  profile is `panic = "abort"`, so any request reaching one took the whole
-  process down — including the dashboard's first call
-  (`GET /v1/monitors/summary`), the `/readyz` probe, the `/metrics` scrape, and
-  the unauthenticated ingest endpoints (OTLP / RUM / syslog / profiles /
-  Prometheus remote-write). Now `pool()` and every stub return
-  `DbError::Unsupported`, surfaced as **501** `{"error":{"code":"unsupported"}}`.
-  The heartbeat reads behind the dashboard, monitor detail, status-page latency,
-  test-now, and the GDPR session/recovery-code cleanup moved onto the `Store`
-  seam, so they now work on every backend instead of erroring. `/readyz` does a
-  Store round-trip off Postgres; `/metrics` omits the pool gauges there; the
-  per-API-key rate limiter fails open without a pool (as it already did on a
-  counter error). Postgres behaviour is unchanged. Regression test
-  `tests/sqlite_backend.rs` drives the real router over a SQLite store and now
-  runs in the `backend-sqlite` CI job.
+- **`lettre` 0.11.23 → 0.11.24** (SMTP for email channels and status-page
+  subscriber mail): fixes RUSTSEC-2026-0560 to -0565, including STARTTLS
+  response injection, SMTP command injection via missing dot-stuffing, mail to a
+  quoted local part going to a different address, and three panic / memory DoS
+  bugs triggered by a malicious server. Also `url` 2.5.8 → 2.5.9
+  (RUSTSEC-2026-0592, stack overflow on nested `blob:` URLs) and `cookie`
+  0.18.2 → 0.18.3 (RUSTSEC-2026-0594). Lockfile only.
+- **RADIUS probe no longer falls back to a fixed `probe` / `probe` password**
+  when none is configured; it sends a random one. Access-Reject still counts as
+  Up, and a fixed pair could have matched a real account.
+- **Frontend dev tooling:** `npm audit fix` clears all frontend advisories
+  (vite 8.0.16 → 8.3.8, vitest 4.1.8 → 4.1.12, postcss, undici, source-map-js,
+  nanoid). Lockfile only.
+- **Example demo apps:** OpenTelemetry JS bumped to the current SDK
+  (`sdk-node` 0.57 → 0.301, `auto-instrumentations-node` 0.56 → 0.83,
+  `resources` / `sdk-logs` → 3.x), clearing the Prometheus-exporter crash
+  advisories. `otel.js` moved to the new APIs (`resourceFromAttributes`, logs
+  API in `@opentelemetry/api`, log processor passed into the `NodeSDK`). Traces
+  verified end to end against a local Rampart. Known, pre-existing: the
+  `demo-app` backend's OTLP logs don't arrive in Rampart (0 on the old versions
+  too); not fixed here.
+- **Rust OpenTelemetry 0.30 → 0.33** (`opentelemetry`, `_sdk`, `-otlp`,
+  `-appender-tracing`, `-proto`; `tracing-opentelemetry` 0.31 → 0.34). Clears
+  GHSA-w9wp-h8wv-79jx (unbounded `baggage` header parsing). Not reachable in
+  Rampart, which never extracts inbound propagation headers, but the bump was
+  clean. `rampart-api` now uses the workspace `prost` (0.14) to match
+  `opentelemetry-proto`.
+- **Examples:** the `everything` webhook sink echoed the request method and path
+  into its HTML page unescaped (reflected XSS); all request-derived values are
+  now escaped. Both demo backends rate-limit `/api` per IP (600/min, well above
+  the demo pages' polling).
+- CodeQL `rust/hard-coded-cryptographic-value` in `secrets.rs`: the fixed keys
+  were test-only; the tests now generate keys.
+- **Dependency refresh: 32 of 41 RustSec advisories cleared.** `cargo deny` has
+  failed on `main` since 2026-07-07. A semver-compatible `cargo update` (220
+  lockfile packages, no manifest change) fixes advisories in `anyhow`,
+  `crossbeam-epoch`, `ctutils`, `h2`, `hickory-net` / `-proto` / `-resolver`
+  (DNSSEC validation, malformed-packet panics, unbounded retries), `rustls`
+  0.23, `rustls-webpki` 0.103, `tokio`, `webpki-roots` and `webpki-root-certs`.
+  Notable bumps: tokio 1.52.3 → 1.54.1, rustls 0.23.40 → 0.23.46, hickory
+  0.26.1 → 0.26.3, hyper 1.10 → 1.12.
+- **MQTT / NATS probes moved to rustls 0.23.** `rumqttc` 0.24 → 0.25 with
+  `use-rustls-no-provider` (no aws-lc-rs) and `async-nats` 0.36 → 0.52
+  (`ring`) drop `rustls` 0.22 from the tree. No probe code changes; both
+  re-tested against live brokers, including TLS with real certificate
+  verification.
+- **`cargo deny` green again.** The 7 remaining advisories have no fixed
+  release reachable without breaking the pure-Rust build or a major crypto
+  bump; each is documented with reachability and a fix path in
+  `docs/SECURITY-DEBT.md` and listed in `deny.toml`.
 
 ### Fixed
+- **Self-telemetry no longer panics at startup.** With `RAMPART_OTLP_ENDPOINT`
+  set, `init_tracing()` built the OTLP exporter's HTTP client before `main`
+  installed the ring crypto provider; on the new exporter that panics with
+  "No provider set". The provider is now installed first. Verified: Rampart
+  exporting to itself ingests its own spans and logs.
 - **Status-page subscriber emails for incidents now send on SQLite / MySQL.**
   The SMTP config was read with the Postgres pool, so on other backends the
   incident fan-out skipped sending (#96 turned the previous panic into a silent
   skip). It now loads through the `Store` seam.
-
 - **CI runs again.** `ci.yml` has failed YAML parsing since the multi-DB jobs
   landed (2026-06-23): two `run:` commands end in `sqlite::` / `mysql::`, and a
   plain YAML scalar cannot end in a colon. Every CI run since was a 0-second
@@ -187,6 +215,16 @@ For the procedure to cut a release see [`docs/RELEASING.md`](docs/RELEASING.md).
   `sizeLimit` (256Mi) and the container gets `ephemeral-storage` requests/limits,
   so runaway scratch can't fill the node and evict neighbours. (six-persona audit
   ranks 2 + 3.)
+
+### Known issues
+- 7 RustSec advisories remain accepted with justification (old `rustls` /
+  `rustls-webpki` via the MSSQL and MQTT probe drivers, `crypto-bigint`, `rsa`,
+  bundled SQLite); see `docs/SECURITY-DEBT.md`. `cargo deny` passes.
+- Open CodeQL alerts on the notifier channels (`rust/cleartext-transmission`)
+  remain: those providers require the credential in an HTTPS URL. Since this
+  release the URL no longer reaches logs or the delivery log.
+- The `examples/demo-app` backend's OTLP logs don't reach Rampart (traces do).
+  This predates the OpenTelemetry upgrade.
 
 ---
 
@@ -6805,7 +6843,8 @@ Full rationale in [`docs/DESIGN-ORIGINAL.md`](docs/DESIGN-ORIGINAL.md).
 
 ---
 
-[Unreleased]: https://github.com/pen-pal/rampart/compare/v0.42.0...HEAD
+[Unreleased]: https://github.com/penpalabs/rampart/compare/v0.158.0...HEAD
+[0.158.0]: https://github.com/penpalabs/rampart/releases/tag/v0.158.0
 [0.99.3]:     https://github.com/pen-pal/rampart/releases/tag/v0.99.3
 [0.99.2]:     https://github.com/pen-pal/rampart/releases/tag/v0.99.2
 [0.99.1]:     https://github.com/pen-pal/rampart/releases/tag/v0.99.1
