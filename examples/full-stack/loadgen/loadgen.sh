@@ -17,7 +17,7 @@ API="${RAMPART_URL:-http://rampart:3000}"
 EMAIL="${RAMPART_ADMIN_EMAIL:-demo@rampart.local}"
 PASS="${RAMPART_ADMIN_PASSWORD:-Rampart-Live-9271}"
 CJ=/tmp/cj
-J='-H content-type:application/json'
+J='content-type:application/json'
 
 log() { echo "[loadgen] $*"; }
 
@@ -26,9 +26,9 @@ until curl -sf "$API/healthz" >/dev/null 2>&1; do sleep 2; done
 log "rampart is up"
 
 # First-run admin (no-op once it exists), then log in for a session cookie.
-REG=$(curl -s -c "$CJ" $J -X POST "$API/v1/auth/register" \
+REG=$(curl -s -c "$CJ" -H "$J" -X POST "$API/v1/auth/register" \
   -d "{\"email\":\"$EMAIL\",\"name\":\"Demo\",\"password\":\"$PASS\"}" 2>/dev/null)
-curl -s -c "$CJ" $J -X POST "$API/v1/auth/login" \
+curl -s -c "$CJ" -H "$J" -X POST "$API/v1/auth/login" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}" >/dev/null 2>&1 || true
 # Verify we actually have a session; warn loudly if not (e.g. password policy
 # rejected register and the user never existed).
@@ -38,9 +38,9 @@ if ! curl -s -b "$CJ" "$API/v1/auth/me" 2>/dev/null | grep -q '"email"'; then
 fi
 
 # Live monitors pointing at the in-network probe targets.
-curl -s -b "$CJ" $J -X POST "$API/v1/monitors" \
+curl -s -b "$CJ" -H "$J" -X POST "$API/v1/monitors" \
   -d '{"name":"live · healthy target","kind":"http","url":"http://target-healthy/","config":{},"interval_seconds":20}' >/dev/null 2>&1 || true
-curl -s -b "$CJ" $J -X POST "$API/v1/monitors" \
+curl -s -b "$CJ" -H "$J" -X POST "$API/v1/monitors" \
   -d '{"name":"live · flaky target","kind":"http","url":"http://target-flaky:8080/","config":{},"interval_seconds":20}' >/dev/null 2>&1 || true
 
 # Drive continuous REAL traffic against Rampart's own API. Rampart is configured

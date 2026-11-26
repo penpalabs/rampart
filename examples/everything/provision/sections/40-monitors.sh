@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 40-monitors.sh — one monitor of EVERY one of the 42 MonitorKinds, against the
 # real in-network targets. Common kinds probe live default services; heavy/exotic
 # kinds probe services that only exist under `docker compose --profile heavy`
@@ -24,12 +25,14 @@ m "edge · healthy nginx" \
   "{\"name\":\"edge · healthy nginx\",\"kind\":\"http\",\"url\":\"http://target-healthy/\",\"interval_seconds\":20,\"group_id\":\"$GRP_EDGE\"}" >/dev/null
 
 # FLAPPING http → real Down/Up cycles, drives episode/escalation/on-call/SLO.
-export MON_FLAP="$(m 'edge · flapping ready probe' \
+export MON_FLAP
+MON_FLAP="$(m 'edge · flapping ready probe' \
   "{\"name\":\"edge · flapping ready probe\",\"kind\":\"http\",\"url\":\"http://demo-backend:8080/api/ready\",\"interval_seconds\":15,\"max_retries\":1,\"group_id\":\"$GRP_EDGE\",\"slo_target_pct\":99.0,\"slo_window_days\":7}")"
 
 # Also a genuinely-flapping target (503 for 25s/min) so even without UI toggles
 # there's a real outage every minute.
-export MON_FLAKY="$(m 'edge · flaky target (503/min)' \
+export MON_FLAKY
+MON_FLAKY="$(m 'edge · flaky target (503/min)' \
   "{\"name\":\"edge · flaky target (503/min)\",\"kind\":\"http\",\"url\":\"http://target-flaky:8080/\",\"interval_seconds\":15,\"group_id\":\"$GRP_EDGE\"}")"
 
 # keyword: asserts text in the /welcome page
@@ -53,7 +56,8 @@ m "edge · tls healthy" \
   "{\"name\":\"edge · tls healthy\",\"kind\":\"tls\",\"hostname\":\"tls-target\",\"config\":{\"port\":8443,\"warn_days\":3},\"interval_seconds\":60,\"group_id\":\"$GRP_EDGE\"}" >/dev/null
 
 # push: server mints a token; push-cron sends real heartbeats + a Down flip.
-export MON_PUSH_ID="$(m 'jobs · nightly backup (push)' \
+export MON_PUSH_ID
+MON_PUSH_ID="$(m 'jobs · nightly backup (push)' \
   "{\"name\":\"jobs · nightly backup (push)\",\"kind\":\"push\",\"interval_seconds\":120,\"group_id\":\"$GRP_CORE\"}")"
 
 # synthetic: 2-step login → authenticated fetch with a var extraction.
@@ -122,7 +126,8 @@ m "egress · browser (needs renderer)" "{\"name\":\"egress · browser (needs ren
 # --- a private-only target the REMOTE AGENT probes --------------------------
 # Reachable only from inside the network on a separate name; we assign it to the
 # agent below so the probe genuinely comes from the agent, not the server.
-export MON_AGENT="$(m 'agent · private-only target' \
+export MON_AGENT
+MON_AGENT="$(m 'agent · private-only target' \
   "{\"name\":\"agent · private-only target\",\"kind\":\"http\",\"url\":\"http://agent-target/\",\"interval_seconds\":30,\"group_id\":\"$GRP_NETWORK\"}")"
 
 # --- capture the push token for the push-cron -------------------------------

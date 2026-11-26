@@ -8,4 +8,6 @@ ENV NODE_ENV=production
 # The entrypoint sources it (if present) before starting the app.
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
+# Run as the image's unprivileged `node` user, not root.
+USER node
 CMD ["./entrypoint.sh"]

@@ -1,7 +1,7 @@
+# shellcheck shell=bash
 # 70-maintenance-silence.sh — a maintenance window covering NOW, and a silence
 # created then lifted (demonstrating both the create and the lift).
 
-NOW="$(date -u +%FT%TZ)"
 START="$(date -u -d '-10 minutes' +%FT%TZ 2>/dev/null || date -u -v-10M +%FT%TZ)"
 END="$(date -u -d '+2 hours' +%FT%TZ 2>/dev/null || date -u -v+2H +%FT%TZ)"
 
@@ -17,7 +17,7 @@ if ! echo "$MW" | jq -e '(if type=="array" then .[] else (.items[]?) end)|select
 fi
 
 # --- a recurring weekly maintenance window (shows recurrence) ---------------
-if ! echo "$(get /v1/maintenance-windows)" | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.name=="weekly window")' >/dev/null 2>&1; then
+if ! get /v1/maintenance-windows | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.name=="weekly window")' >/dev/null 2>&1; then
   post /v1/maintenance-windows "$(jq -nc --arg s "$START" --arg e "$END" '{
     name:"weekly window", start_at:$s, end_at:$e,
     recurrence:{kind:"weekly", weekdays:[0,6]} }')" >/dev/null
@@ -35,6 +35,6 @@ if [ -n "$SIL_ID" ]; then
 fi
 
 # --- a standing GLOBAL silence left in place so the UI shows an active one ---
-if ! echo "$(get /v1/silences)" | jq -e '.[]?|select(.reason=="demo: standing global mute")' >/dev/null 2>&1; then
+if ! get /v1/silences | jq -e '.[]?|select(.reason=="demo: standing global mute")' >/dev/null 2>&1; then
   post /v1/silences '{"reason":"demo: standing global mute","duration_minutes":1}' >/dev/null 2>&1 || true
 fi

@@ -5,4 +5,8 @@ RUN apt-get update \
 COPY tls-entrypoint.sh /tls-entrypoint.sh
 RUN chmod +x /tls-entrypoint.sh
 EXPOSE 8443 9443
+# Unprivileged user; it only needs to write the generated certs to /certs.
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin tls \
+ && mkdir -p /certs && chown tls /certs
+USER tls
 ENTRYPOINT ["/tls-entrypoint.sh"]

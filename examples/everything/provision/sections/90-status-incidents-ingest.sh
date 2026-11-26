@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 90-status-incidents-ingest.sh — public status page (sections, custom branding,
 # subscriber, incident + running updates, incident templates), a PRIVATE
 # password-protected page, and ingest tokens for every inbound vendor. Posts a
@@ -48,7 +49,7 @@ if [ -n "$SP_ID" ]; then
 fi
 
 # --- private / password-protected status page -------------------------------
-if ! echo "$(get /v1/status-pages)" | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.slug=="demo-internal")' >/dev/null 2>&1; then
+if ! get /v1/status-pages | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.slug=="demo-internal")' >/dev/null 2>&1; then
   post /v1/status-pages '{"slug":"demo-internal","title":"Internal Status (private)","password":"Rampart-Internal-1","theme":"dark","custom_css":".rampart-status{filter:none}"}' >/dev/null
   log "private password-protected status page created (slug=demo-internal, pw=Rampart-Internal-1)"
 fi
@@ -73,10 +74,10 @@ mint_token() {  # $1=label → echoes raw token
   post "/v1/status-pages/$SP_ID/ingest-tokens" "{\"label\":\"$1\"}" | jq -r '.token // empty'
 }
 TOK_AM="$(mint_token alertmanager)"
-TOK_GRAFANA="$(mint_token grafana)"
-TOK_DD="$(mint_token datadog)"
-TOK_PD="$(mint_token pagerduty)"
-TOK_OG="$(mint_token opsgenie)"
+mint_token grafana >/dev/null
+mint_token datadog >/dev/null
+mint_token pagerduty >/dev/null
+mint_token opsgenie >/dev/null
 TOK_GEN="$(mint_token generic)"
 log "ingest tokens minted (alertmanager, grafana, datadog, pagerduty, opsgenie, generic)"
 

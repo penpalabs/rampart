@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 10-secrets.sh — mint the runtime secrets real services consume, and write
 # them to the shared volume. Captured: WRITE + ADMIN api-keys, an error-project
 # DSN (built from its public_key + id), and an OTLP base for the app.
@@ -34,18 +35,18 @@ fi
 # Always mint a fresh one on a fresh stack; on re-run we can't recover the raw
 # token, so we mint a uniquely-named one if the standard name is gone.
 WKEY=""
-if ! echo "$(get /v1/api-keys)" | jq -e '.[]?|select(.name=="demo-writer")' >/dev/null 2>&1; then
+if ! get /v1/api-keys | jq -e '.[]?|select(.name=="demo-writer")' >/dev/null 2>&1; then
   WKEY="$(post /v1/api-keys '{"name":"demo-writer","scope":"write","rate_limit_per_hour":100000}' | jq -r '.token // empty')"
   [ -n "$WKEY" ] && log "WRITE api-key minted (demo-writer)"
 fi
 
 # --- ADMIN-scoped api-key (read tier shows all key scopes) ------------------
-if ! echo "$(get /v1/api-keys)" | jq -e '.[]?|select(.name=="demo-admin-key")' >/dev/null 2>&1; then
+if ! get /v1/api-keys | jq -e '.[]?|select(.name=="demo-admin-key")' >/dev/null 2>&1; then
   post /v1/api-keys '{"name":"demo-admin-key","scope":"admin","rate_limit_per_hour":100000}' >/dev/null
   log "ADMIN api-key minted (demo-admin-key)"
 fi
 # --- READ-scoped api-key ----------------------------------------------------
-if ! echo "$(get /v1/api-keys)" | jq -e '.[]?|select(.name=="demo-read-key")' >/dev/null 2>&1; then
+if ! get /v1/api-keys | jq -e '.[]?|select(.name=="demo-read-key")' >/dev/null 2>&1; then
   post /v1/api-keys '{"name":"demo-read-key","scope":"read","rate_limit_per_hour":100000}' >/dev/null
   log "READ api-key minted (demo-read-key)"
 fi

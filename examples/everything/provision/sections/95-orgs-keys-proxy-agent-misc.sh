@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 95-orgs-keys-proxy-agent-misc.sh — multi-org, proxy, remote agent, scheduled
 # report, deploy markers, presets, templates (monitor + notification/Liquid),
 # CSV import round-trip, and bulk ops.
@@ -28,12 +29,12 @@ if [ -n "$ORG2_ID" ]; then
   # that isolation is ENFORCED at the Postgres layer (defense-in-depth on top
   # of the app-level scoping). ensure_monitor checks the CURRENT org's list,
   # so re-runs are idempotent per-org.
-  m_dt1="$(ensure_monitor 'demo-team · web' \
-    '{"name":"demo-team · web","kind":"http","url":"http://target-healthy/","interval_seconds":30}')"
-  m_dt2="$(ensure_monitor 'demo-team · api ready' \
-    '{"name":"demo-team · api ready","kind":"http","url":"http://target-healthy/","interval_seconds":30}')"
-  m_dt3="$(ensure_monitor 'demo-team · keyword' \
-    '{"name":"demo-team · keyword","kind":"keyword","url":"http://target-healthy/","config":{"keyword":"Welcome"},"interval_seconds":60}')"
+  ensure_monitor 'demo-team · web' \
+    '{"name":"demo-team · web","kind":"http","url":"http://target-healthy/","interval_seconds":30}' >/dev/null
+  ensure_monitor 'demo-team · api ready' \
+    '{"name":"demo-team · api ready","kind":"http","url":"http://target-healthy/","interval_seconds":30}' >/dev/null
+  ensure_monitor 'demo-team · keyword' \
+    '{"name":"demo-team · keyword","kind":"keyword","url":"http://target-healthy/","config":{"keyword":"Welcome"},"interval_seconds":60}' >/dev/null
   log "Demo Team monitors created (demo-team · web / api ready / keyword)"
 
   # Mint a per-org ingest key (returns the raw token ONCE) so telemetry sent
@@ -86,7 +87,7 @@ if [ -z "$PROXY_ID" ]; then
   log "proxy created: http://proxy.demo.local:3128"
 fi
 if [ -n "$PROXY_ID" ]; then
-  m_proxy="$(ensure_monitor 'edge · via proxy' "{\"name\":\"edge · via proxy\",\"kind\":\"http\",\"url\":\"http://target-healthy/\",\"proxy_id\":\"$PROXY_ID\",\"interval_seconds\":60,\"group_id\":\"$GRP_EDGE\"}")"
+  ensure_monitor 'edge · via proxy' "{\"name\":\"edge · via proxy\",\"kind\":\"http\",\"url\":\"http://target-healthy/\",\"proxy_id\":\"$PROXY_ID\",\"interval_seconds\":60,\"group_id\":\"$GRP_EDGE\"}" >/dev/null
   log "monitor 'edge · via proxy' routes through the proxy"
 fi
 
@@ -155,7 +156,7 @@ fi
 
 # --- CSV import round-trip --------------------------------------------------
 # export current monitors, then import a tiny CSV (idempotent: name-guarded).
-if ! echo "$(get /v1/monitors)" | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.name=="csv · imported")' >/dev/null 2>&1; then
+if ! get /v1/monitors | jq -e '(if type=="array" then .[] else (.items[]?) end)|select(.name=="csv · imported")' >/dev/null 2>&1; then
   CSV='name,kind,url,interval_seconds
 csv · imported,http,http://target-healthy/,60'
   post_text /v1/monitors/import-csv "text/csv" "$CSV" >/dev/null 2>&1 || true

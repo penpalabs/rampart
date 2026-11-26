@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 50-routing.sh — tag-routing end to end:
 #   folder tag + channel tag (same tag) ⇒ channel fires for monitors in folder
 #   folder channel (attached directly to a folder)

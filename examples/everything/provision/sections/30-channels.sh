@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 30-channels.sh — create ALL notification channel kinds as CONFIG so every one
 # is visible in the UI. REAL delivery is wired only for sink-compatible kinds
 # (configurable URL → webhook-sink, or SMTP → Mailpit); vendor-hardcoded kinds
