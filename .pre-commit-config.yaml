@@ -1,77 +1,100 @@
-# pre-commit hook config for Rampart.
+# Git hooks for Rampart, managed by pre-commit. Details: docs/security-scanning.md
 #
-# Install once per clone:
-#   pip install pre-commit   # or `brew install pre-commit`
-#   pre-commit install
+# One-time setup per clone:
+#   brew install pre-commit gitleaks actionlint     # or pip install pre-commit + release binaries
+#   pre-commit install            # installs ALL hook types below (default_install_hook_types)
+#   pre-commit run --all-files    # check everything once
 #
-# Run on the full tree (rather than just staged files) to seed a clean
-# baseline after install:
-#   pre-commit run --all-files
+# What runs when:
+#   git commit  -> pre-commit stage:  gitleaks on the staged changes, trufflehog (verified
+#                                     secrets), file hygiene, shellcheck, cargo fmt,
+#                                     zizmor + actionlint (only when workflows change)
+#               -> commit-msg stage:  gitleaks on the commit MESSAGE
+#   git push    -> pre-push stage:    gitleaks on the FULL git history (incl. all messages)
+# The `security` workflow runs the same scanners in CI, so --no-verify is not a bypass.
 #
-# What runs on every `git commit`:
-#   1. pre-commit-hooks  — quick whole-tree hygiene (trailing whitespace,
-#                          end-of-file, JSON/TOML/YAML parse, merge-conflict
-#                          markers, broken symlinks, accidentally-committed
-#                          private keys + AWS creds, large files).
-#   2. gitleaks          — repo-wide secret scanner.
-#   3. trufflehog        — verified-secret scanner (catches creds that
-#                          gitleaks's pattern set misses).
-#   4. shellcheck        — *.sh static analysis.
-#   5. cargo-fmt         — `cargo fmt --all -- --check` in backend/ so any
-#                          staged .rs file lands in workspace-formatted
-#                          state. If anything would change, the hook
-#                          aborts so the operator can `cargo fmt --all`
-#                          and re-stage.
+# Remote hooks are pinned to commit SHAs. Update with: pre-commit autoupdate --freeze
+
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
 
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-json
-      - id: check-toml
-      - id: check-yaml
-        # Helm chart templates use Go template directives ({{- if … -}})
-        # which the PyYAML loader rejects with a flow-node parse error.
-        # Helm itself validates these via `helm lint` + `helm template`.
-        exclude: ^charts/.*/templates/.*\.ya?ml$
-      - id: check-merge-conflict
-      - id: check-symlinks
-      - id: detect-private-key
-      - id: check-added-large-files
-      - id: detect-aws-credentials
-        args: [--allow-missing-credentials]
-
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.2
-    hooks:
-      - id: gitleaks
-
-  - repo: https://github.com/trufflesecurity/truffleHog
-    rev: v3.88.26
-    hooks:
-      - id: trufflehog
-        name: TruffleHog
-        description: Detect verified secrets with TruffleHog.
-        entry: trufflehog git file://. --since-commit HEAD --results=verified --fail
-        language: golang
-        pass_filenames: false
-
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
-    hooks:
-      - id: shellcheck
-
-  # Local rustfmt hook. Runs `cargo fmt --all -- --check` inside backend/
-  # so every Cargo workspace member is held to the same `rustfmt.toml`
-  # standard. Triggers only when a Rust file or Cargo manifest is
-  # staged, so non-backend commits don't pay the cargo-startup cost.
   - repo: local
     hooks:
+      - id: gitleaks-staged
+        name: gitleaks (staged changes)
+        entry: gitleaks git --pre-commit --staged --redact --no-banner -v --config .gitleaks.toml
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # pre-commit passes the commit-message file path as $1
+      - id: gitleaks-commit-msg
+        name: gitleaks (commit message)
+        entry: sh -c 'gitleaks stdin --redact --no-banner -v --config .gitleaks.toml < "$1"' --
+        language: system
+        stages: [commit-msg]
+
+      - id: gitleaks-history
+        name: gitleaks (full history before push)
+        entry: gitleaks git . --redact --no-banner -v --config .gitleaks.toml
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      # `cargo fmt --all -- --check` in backend/, only when Rust files or manifests change.
       - id: cargo-fmt
         name: cargo fmt --all
         entry: bash -c 'cd backend && cargo fmt --all -- --check'
         language: system
         files: \.(rs|toml)$
         pass_filenames: false
+
+  # GitHub Actions security: unpinned actions, credential persistence, injection, permissions
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: c7d31dc612dffdd4d3b2f2b88b9660d3ab057ee8  # frozen: v1.33.1
+    hooks:
+      - id: zizmor
+
+  # Verified secrets only (live credentials), complements gitleaks' pattern matching
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: b06f6d72a3791308bb7ba59c2b8cb7a083bd17e4  # frozen: v3.88.26
+    hooks:
+      - id: trufflehog
+        name: TruffleHog
+        entry: trufflehog git file://. --since-commit HEAD --results=verified --fail
+        language: golang
+        pass_filenames: false
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff  # frozen: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        # Helm templates use Go template directives and mkdocs.yml uses
+        # !!python/name tags, both of which PyYAML rejects; `helm lint` and
+        # `mkdocs build --strict` validate them in CI instead.
+        exclude: ^(charts/.*/templates/.*\.ya?ml|mkdocs\.yml)$
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-aws-credentials
+        args: [--allow-missing-credentials]

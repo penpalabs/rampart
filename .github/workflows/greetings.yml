@@ -2,7 +2,8 @@
 name: greetings
 
 on:
-  pull_request_target:
+  # Needs a write token on fork PRs to comment; never checks out or runs PR code.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened]
   issues:
     types: [opened]
@@ -15,7 +16,7 @@ jobs:
   greeting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/first-interaction@v3
+      - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           issue_message: >

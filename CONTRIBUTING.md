@@ -150,6 +150,13 @@ DATABASE_URL=postgres://rampart:rampart@localhost:5432/rampart cargo sqlx prepar
 git add .sqlx
 ```
 
+**Git hooks + secret / workflow scanning**
+Install the hooks once per clone; they scan for secrets on every commit and the full history before every push, and lint workflows when they change. The `security` CI workflow runs the same checks. Details: [`docs/security-scanning.md`](docs/security-scanning.md).
+```bash
+brew install pre-commit gitleaks actionlint
+pre-commit install
+```
+
 **Security Scanning (`cargo-deny`)**
 CI runs a Rust dependency security gate. Reproduce locally before pushing:
 ```bash

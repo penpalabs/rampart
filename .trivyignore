@@ -1,0 +1,5 @@
+# Trivy misconfiguration ignores. Every entry needs a reason.
+
+# KSV-0125 "image from an untrusted registry": Trivy's built-in trusted list has
+# no ghcr.io, where our own signed, attested image is published.
+KSV-0125

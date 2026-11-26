@@ -123,6 +123,7 @@ nav:
       - Architecture: ARCHITECTURE.md
       - Dependencies: DEPENDENCIES.md
       - SIEM / syslog export: design/SIEM.md
+      - Security scanning: security-scanning.md
       - Security debt: SECURITY-DEBT.md
       - Releasing: RELEASING.md
       - Maintainers: MAINTAINERS.md

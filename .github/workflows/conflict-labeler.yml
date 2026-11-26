@@ -5,7 +5,8 @@ name: conflict-labeler
 on:
   push:
     branches: [main]
-  pull_request_target:
+  # Needs a write token on fork PRs to label them; never checks out or runs PR code.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [synchronize, reopened, opened]
 
 permissions:
@@ -39,7 +40,7 @@ jobs:
             --description "Merge conflicts with the base branch — needs a rebase." \
             --force
 
-      - uses: prince-chrismc/label-merge-conflicts-action@v3
+      - uses: prince-chrismc/label-merge-conflicts-action@21e6705eaa6aab66e4e486279389c8e3e4c465b7 # v3.0.4
         with:
           conflict_label_name: "has-conflicts"
           github_token: ${{ secrets.GITHUB_TOKEN }}
