@@ -2,8 +2,9 @@
 # shellcheck disable=SC2015  # pass() only prints and cannot fail, so `A && pass || fail` is safe
 # verify.sh — run this AFTER `docker compose up` has been live for a few minutes.
 # Asserts every tier is genuinely non-empty: monitors of many kinds, delivery-log
-# rows, an open episode, an incident from ingest, and traces/logs/metrics/rum/
-# profiles/errors all present. Exits non-zero if a tier is empty.
+# rows, an escalation episode (briefly flips the demo backend Down if none is
+# open), an incident from ingest, and traces/logs/metrics/rum/profiles/errors
+# all present. Exits non-zero if a tier is empty.
 #
 #   bash verify.sh            # uses defaults below
 #   API=http://localhost:3000 EMAIL=... PASS=... bash verify.sh
@@ -12,6 +13,7 @@ API="${API:-http://localhost:3000}"
 EMAIL="${EMAIL:-${RAMPART_ADMIN_EMAIL:-demo@rampart.local}}"
 PASS="${PASS:-${RAMPART_ADMIN_PASSWORD:-Rampart-Live-9271}}"
 SINK="${SINK_URL:-http://localhost:8099}"
+FRONT="${FRONT_URL:-http://localhost:8088}"   # demo frontend; proxies /api + /admin
 CJ="$(mktemp)"
 J=(-H 'content-type: application/json')
 command -v jq >/dev/null 2>&1 || { echo "verify.sh needs jq + curl on PATH (apt-get install jq / brew install jq)"; exit 2; }
@@ -95,14 +97,34 @@ PSVC="$(g /v1/profiles/services)"; echo "$PSVC" | jq -e 'length>=1' >/dev/null 2
 
 # --- runtime state: delivery log, episodes, incidents -----------------------
 atleast 1 "delivery-log rows (real notifications sent)" "$(g '/v1/delivery-log?limit=50')"
-EPIS="$(g /v1/escalation-policies/episodes)"; echo "$EPIS" | jq -e '(if type=="array" then length else (.items|length) end) >= 1' >/dev/null 2>&1 \
-  && pass "escalation episodes present" || fail "escalation episodes (none yet — let the flapping monitor cycle)"
+# n_at <path>: element count at an API path; wait_n <path>: poll up to 90s for >=1.
+n_at() { local n; n="$(g "$1" | count)"; echo "${n:-0}"; }
+wait_n() { for _ in $(seq 18); do [ "$(n_at "$1")" -ge 1 ] && return 0; sleep 5; done; return 1; }
+# The API lists only OPEN episodes, and the escalation-bound probe (/api/ready)
+# is only Down when flipped. If none is open, flip it Down, wait, flip it back Up.
+EPS=/v1/escalation-policies/episodes
+health() { curl -s -o /dev/null -X POST "${J[@]}" "$FRONT/admin/health" -d "{\"down\":$1}"; }
+if [ "$(n_at $EPS)" -ge 1 ]; then pass "escalation episode open"
+else
+  trap 'health false' EXIT; health true
+  wait_n $EPS; ok=$?
+  health false; trap - EXIT
+  [ "$ok" = 0 ] && pass "escalation episode opened (flipped /api/ready Down, restored)" \
+    || fail "escalation episode (none opened 90s after flipping /api/ready Down via $FRONT)"
+fi
 # incident from the real ingest webhook (open or recently resolved)
 INC="$(g /v1/incidents/recent)"; echo "$INC" | jq -e '(if type=="array" then length else (.items|length) end) >= 1' >/dev/null 2>&1 \
   && pass "incidents present (from ingest webhook)" || fail "incidents present"
 # detection findings from the real failed-login logs
-FIND="$(g '/v1/detection-rules/findings?limit=20')"; echo "$FIND" | jq -e '(if type=="array" then length else (.items|length) end) >= 1' >/dev/null 2>&1 \
-  && pass "detection findings raised (from real logs)" || fail "detection findings (none yet — let logins run)"
+# Logins normally come from the frontend page's autodrive (needs a browser open).
+# If no finding yet, send 20 logins (~40% fail) through the frontend and wait.
+FND='/v1/detection-rules/findings?limit=20'
+if [ "$(n_at "$FND")" -ge 1 ]; then pass "detection findings raised (from real logs)"
+else
+  for _ in $(seq 20); do curl -s -o /dev/null -X POST "${J[@]}" "$FRONT/api/login" -d '{"user":"verify"}'; done
+  wait_n "$FND" && pass "detection findings raised (after 20 logins via $FRONT)" \
+    || fail "detection findings (none 90s after 20 logins via $FRONT)"
+fi
 
 # --- sink + mailpit (external, best-effort) ---------------------------------
 SINK_CT="$(curl -s "$SINK/_count" 2>/dev/null | jq -r '.count // 0' 2>/dev/null)"
