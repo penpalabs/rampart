@@ -17,6 +17,18 @@ Don't edit it by hand in feature PRs. For the release procedure see [`docs/RELEA
 
 ---
 
+## [0.158.1](https://github.com/penpalabs/rampart/compare/v0.158.0...v0.158.1) (2026-11-27)
+
+
+### 🐞 Bug Fixes
+
+* **examples:** make verify.sh drive the episode and detection checks itself ([#120](https://github.com/penpalabs/rampart/issues/120)) ([64ea33a](https://github.com/penpalabs/rampart/commit/64ea33af18cf9f9d167f7c53c1d00c085599e737))
+
+
+### 📝 Documentation
+
+* fix stale pen-pal links and improve project discoverability ([#121](https://github.com/penpalabs/rampart/issues/121)) ([92d9f6b](https://github.com/penpalabs/rampart/commit/92d9f6b82ab7835c6a669ef1d1972c2960f7c26d))
+
 ## [0.158.0] — 2026-11-25
 
 A security and stability release, and the first since CI was restored: from
