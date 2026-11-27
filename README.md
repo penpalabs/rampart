@@ -6,6 +6,8 @@
 
 ### Self-hosted uptime monitoring **and** observability you can actually trust.
 
+An open-source alternative to **Uptime Kuma**, **Pingdom**, **Sentry** and **Datadog** that runs on your own hardware.
+
 **One Rust binary. Postgres, MySQL, or SQLite. 42 probe kinds. 129 notification channels.**<br/>
 Uptime + status pages, **error tracking, distributed traces, logs, and RUM** — one binary, no SaaS.<br/>
 Tier alerting • On-call rotations • Multi-step synthetics • **SSO (OIDC)** • **HA (leader election)** • encrypted secrets • SSRF-guarded probes • tamper-evident audit • 2FA.
@@ -68,7 +70,7 @@ We built Rampart because we were tired of choosing between bloated SaaS tools an
 ### How it compares
 
 - **vs. SaaS (Datadog / Pingdom / Site24x7)** — Lives on your hardware, no per-monitor pricing, no log-volume bills, no data leaving your perimeter.
-- **vs. other self-hosted dashboards** — Broader probe catalog (DBs, banner protocols, Kafka, RADIUS, NTP), proper tag routing with folder ancestor inheritance, real audit log, a pluggable backing store (Postgres / MySQL / SQLite), multi-tenant organizations, and a single Rust binary instead of a Node runtime + headless Chromium.
+- **vs. Uptime Kuma and other self-hosted status monitors** — Broader probe catalog (DBs, banner protocols, Kafka, RADIUS, NTP), proper tag routing with folder ancestor inheritance, real audit log, a pluggable backing store (Postgres / MySQL / SQLite), multi-tenant organizations, and a single Rust binary instead of a Node runtime + headless Chromium.
 - **vs. roll-your-own Prometheus blackbox** — Out of the box: status pages, incident posting, maintenance windows, dependency-aware alerting, and 129 outbound channels.
 - **vs. a separate APM/error stack (Datadog / Sentry / Grafana LGTM)** — Error tracking, traces, logs, RUM, and continuous profiling (flamegraphs) live in the *same* binary as your uptime checks, speak OpenTelemetry + Sentry + pprof wire formats (no proprietary agent), and alert through the same channels — instead of standing up and paying for a second platform.
 

@@ -6,7 +6,8 @@
 
 **Self-hosted uptime monitoring _and_ observability you can actually trust.**
 One Rust binary, one Postgres — status pages, error tracking, distributed
-traces, logs, and RUM, with no SaaS and zero telemetry.
+traces, logs, and RUM, with no SaaS and zero telemetry. An open-source
+alternative to Uptime Kuma, Pingdom, Sentry and Datadog.
 
 [Get started](SETUP.md){ .md-button .md-button--primary }
 [First-run walkthrough](WALKTHROUGH.md){ .md-button }

@@ -1,7 +1,8 @@
 site_name: Rampart
 site_description: >-
   Self-hosted uptime monitoring and observability — one Rust binary. Status
-  pages, error tracking, traces, logs, RUM, and tier alerting, no SaaS.
+  pages, error tracking, traces, logs, RUM, and tier alerting, no SaaS. An
+  open-source alternative to Uptime Kuma, Pingdom, Sentry and Datadog.
 site_url: https://penpalabs.github.io/rampart/
 repo_url: https://github.com/penpalabs/rampart
 repo_name: penpalabs/rampart
