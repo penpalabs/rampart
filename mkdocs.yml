@@ -2,9 +2,9 @@ site_name: Rampart
 site_description: >-
   Self-hosted uptime monitoring and observability — one Rust binary. Status
   pages, error tracking, traces, logs, RUM, and tier alerting, no SaaS.
-site_url: https://pen-pal.github.io/rampart/
-repo_url: https://github.com/pen-pal/rampart
-repo_name: pen-pal/rampart
+site_url: https://penpalabs.github.io/rampart/
+repo_url: https://github.com/penpalabs/rampart
+repo_name: penpalabs/rampart
 edit_uri: edit/main/docs/
 copyright: AGPL-3.0 · self-hosted, single-tenant, zero telemetry
 
@@ -84,7 +84,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/pen-pal/rampart
+      link: https://github.com/penpalabs/rampart
 
 nav:
   - Home: index.md

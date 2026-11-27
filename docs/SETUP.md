@@ -12,7 +12,7 @@ Easiest. One command builds the image + brings up Postgres + Rampart.
 ### 1. Clone
 
 ```bash
-git clone https://github.com/pen-pal/rampart.git
+git clone https://github.com/penpalabs/rampart.git
 cd rampart
 ```
 

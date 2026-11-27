@@ -35,7 +35,7 @@ Tier alerting • On-call rotations • Multi-step synthetics • **SSO (OIDC)**
 Get up and running in under 60 seconds. No SaaS accounts, no agents, no extra services.
 
 ```bash
-git clone https://github.com/pen-pal/rampart.git
+git clone https://github.com/penpalabs/rampart.git
 cd rampart
 docker compose up -d
 ```
@@ -198,7 +198,7 @@ rampart/
 ### 🐳 Docker (Recommended)
 
 ```bash
-git clone https://github.com/pen-pal/rampart.git
+git clone https://github.com/penpalabs/rampart.git
 cd rampart
 docker compose up -d           # builds image + starts postgres
 ```
@@ -345,7 +345,7 @@ npx playwright test       # e2e on Chromium + Firefox + WebKit
 
 ## 📚 Documentation
 
-📖 **Full documentation site: [pen-pal.github.io/rampart](https://pen-pal.github.io/rampart/)** — searchable, dark-mode, organized by topic. The source lives in [`docs/`](docs/) and the highlights are linked below.
+📖 **Full documentation site: [penpalabs.github.io/rampart](https://penpalabs.github.io/rampart/)** — searchable, dark-mode, organized by topic. The source lives in [`docs/`](docs/) and the highlights are linked below.
 
 **Getting started & operations**
 - [**docs/SETUP.md**](docs/SETUP.md) — Production install, TLS, reverse proxy, and backups.
@@ -388,13 +388,13 @@ npx playwright test       # e2e on Chromium + Firefox + WebKit
 
 PRs welcome — read [**CONTRIBUTING.md**](CONTRIBUTING.md) first. The scope rules at the top of that file are load-bearing: they keep "self-hosted uptime monitoring" from drifting into "an everything-platform with three half-working features."
 
-Good first issues are tagged [`good-first-issue`](https://github.com/pen-pal/rampart/labels/good-first-issue) and [`help-wanted`](https://github.com/pen-pal/rampart/labels/help-wanted). Adding a probe or a notification channel? Both have step-by-step guides in CONTRIBUTING.
+Good first issues are tagged [`good-first-issue`](https://github.com/penpalabs/rampart/labels/good-first-issue) and [`help-wanted`](https://github.com/penpalabs/rampart/labels/help-wanted). Adding a probe or a notification channel? Both have step-by-step guides in CONTRIBUTING.
 
 ---
 
 ## 🔒 Security
 
-Found a vulnerability? **Don't open a public issue.** Use GitHub's [private vulnerability reporting](https://github.com/pen-pal/rampart/security/advisories/new) so we can ship a patch before it lands on the issue tracker.
+Found a vulnerability? **Don't open a public issue.** Use GitHub's [private vulnerability reporting](https://github.com/penpalabs/rampart/security/advisories/new) so we can ship a patch before it lands on the issue tracker.
 
 CodeQL + Dependabot + cargo-deny + cargo-audit run on every push. Accepted-with-justification advisories are tracked in [**docs/SECURITY-DEBT.md**](docs/SECURITY-DEBT.md) so the acceptance is visible, not buried.
 
@@ -470,7 +470,7 @@ Rampart covers the vast majority of self-hosted uptime + observability use cases
 
 **✅ Recently shipped** (was on this roadmap): a Prometheus `/metrics` exporter, per-API-key rate limiting, read-only RBAC roles, multi-tenant organizations with optional Postgres RLS, and MySQL + SQLite backing stores.
 
-*Have a feature request? [Open a Discussion](https://github.com/pen-pal/rampart/discussions) before submitting a PR to ensure it aligns with our scope.*
+*Have a feature request? [Open a Discussion](https://github.com/penpalabs/rampart/discussions) before submitting a PR to ensure it aligns with our scope.*
 
 ---
 
@@ -480,10 +480,10 @@ We love contributions! Whether it's fixing a typo, adding a new probe kind, or i
 
 Please read [**CONTRIBUTING.md**](CONTRIBUTING.md) for guidelines on how to set up your dev environment, our coding standards, and how to add new probes or notification channels.
 
-- 🐛 **Found a bug?** [Open an Issue](https://github.com/pen-pal/rampart/issues/new?template=bug_report.md).
-- 💡 **Have an idea?** [Start a Discussion](https://github.com/pen-pal/rampart/discussions).
-- 💬 **Need help?** Join our [Discord Server](https://discord.gg/rampart) or ask in [GitHub Discussions](https://github.com/pen-pal/rampart/discussions).
-- 📋 **What changed?** Read the [**CHANGELOG**](CHANGELOG.md) or browse [tagged releases](https://github.com/pen-pal/rampart/releases). Cutting a release is documented in [`docs/RELEASING.md`](docs/RELEASING.md).
+- 🐛 **Found a bug?** [Open an Issue](https://github.com/penpalabs/rampart/issues/new?template=bug_report.yml).
+- 💡 **Have an idea?** [Start a Discussion](https://github.com/penpalabs/rampart/discussions).
+- 💬 **Need help?** Join our [Discord Server](https://discord.gg/rampart) or ask in [GitHub Discussions](https://github.com/penpalabs/rampart/discussions).
+- 📋 **What changed?** Read the [**CHANGELOG**](CHANGELOG.md) or browse [tagged releases](https://github.com/penpalabs/rampart/releases). Cutting a release is documented in [`docs/RELEASING.md`](docs/RELEASING.md).
 - 📜 **API reference?** [`docs/API.md`](docs/API.md) catalogues every endpoint surfaced by the binary, grouped by URL family with per-route source-file pointers.
 
 ---
@@ -492,10 +492,10 @@ Please read [**CONTRIBUTING.md**](CONTRIBUTING.md) for guidelines on how to set 
 
 If you find Rampart useful, please consider giving it a star! It helps us grow the community and keeps us motivated.
 
-<a href="https://star-history.com/#pen-pal/rampart&Date">
+<a href="https://star-history.com/#penpalabs/rampart&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pen-pal/rampart&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pen-pal/rampart&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pen-pal/rampart&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=penpalabs/rampart&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=penpalabs/rampart&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=penpalabs/rampart&type=Date" />
   </picture>
 </a>

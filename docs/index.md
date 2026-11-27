@@ -90,7 +90,7 @@ Rampart agent to adopt.
 ## Run it
 
 ```bash
-git clone https://github.com/pen-pal/rampart.git
+git clone https://github.com/penpalabs/rampart.git
 cd rampart
 docker compose up -d
 # open http://localhost:3000 — first visit creates the admin account
@@ -108,5 +108,5 @@ the [single-binary](SETUP.md) path.
 - **Zero telemetry.** Nothing phones home.
 
 See [Architecture](ARCHITECTURE.md) for the rationale, and
-[CONTRIBUTING](https://github.com/pen-pal/rampart/blob/main/CONTRIBUTING.md) for
+[CONTRIBUTING](https://github.com/penpalabs/rampart/blob/main/CONTRIBUTING.md) for
 what is and isn't in scope.

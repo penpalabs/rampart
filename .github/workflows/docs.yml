@@ -1,6 +1,6 @@
 # Build the MkDocs Material site and publish it to GitHub Pages.
 # Source lives in docs/ + mkdocs.yml; the rendered site is served at
-# https://pen-pal.github.io/rampart/.
+# https://penpalabs.github.io/rampart/.
 name: docs
 
 on:

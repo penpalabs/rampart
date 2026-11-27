@@ -17,7 +17,7 @@
 
 [Unit]
 Description=Rampart self-hosted uptime monitor
-Documentation=https://github.com/pen-pal/rampart
+Documentation=https://github.com/penpalabs/rampart
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
