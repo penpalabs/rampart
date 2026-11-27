@@ -37,7 +37,7 @@ use tracing::warn;
 const USER_AGENT: &str = concat!(
     "Rampart/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/pen-pal/rampart)"
+    " (+https://github.com/penpalabs/rampart)"
 );
 
 pub struct HttpProbe {
