@@ -1,14 +1,22 @@
 site_name: Rampart
 site_description: >-
   Self-hosted uptime monitoring and observability — one Rust binary. Status
-  pages, error tracking, traces, logs, RUM, and tier alerting, no SaaS.
-site_url: https://pen-pal.github.io/rampart/
-repo_url: https://github.com/pen-pal/rampart
-repo_name: pen-pal/rampart
+  pages, error tracking, traces, logs, RUM, and tier alerting, no SaaS. An
+  open-source alternative to Uptime Kuma, Pingdom, Sentry and Datadog.
+site_url: https://penpalabs.github.io/rampart/
+repo_url: https://github.com/penpalabs/rampart
+repo_name: penpalabs/rampart
 edit_uri: edit/main/docs/
 copyright: AGPL-3.0 · self-hosted, single-tenant, zero telemetry
 
 docs_dir: docs
+
+# Hackathon submission notes stay in the repo but off the public site (and
+# out of its search index / sitemap).
+exclude_docs: |
+  HACKATHON*.md
+  hackathon/
+  deploy/aws-vercel.md
 
 # Several docs intentionally link to repo-root files (CHANGELOG, README,
 # .github/*, backend sources) for the GitHub view — those live outside
@@ -84,7 +92,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/pen-pal/rampart
+      link: https://github.com/penpalabs/rampart
 
 nav:
   - Home: index.md

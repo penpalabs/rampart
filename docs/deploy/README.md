@@ -13,7 +13,7 @@ Production-grade scaffolding for running Rampart on a self-hosted box. Everythin
 
 ```bash
 # 1. Clone Rampart to /opt/rampart (or symlink it there)
-sudo git clone https://github.com/pen-pal/rampart /opt/rampart
+sudo git clone https://github.com/penpalabs/rampart /opt/rampart
 
 # 2. Drop the unit in place + enable it
 sudo cp /opt/rampart/docs/deploy/rampart.service /etc/systemd/system/

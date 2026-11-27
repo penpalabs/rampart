@@ -5,8 +5,8 @@ GitHub Container Registry. Rampart is a **stateless** Deployment — bring your
 own Postgres.
 
 > Full chart reference (every value, more examples):
-> [`charts/rampart/README.md`](https://github.com/pen-pal/rampart/blob/main/charts/rampart/README.md)
-> · [`values.yaml`](https://github.com/pen-pal/rampart/blob/main/charts/rampart/values.yaml)
+> [`charts/rampart/README.md`](https://github.com/penpalabs/rampart/blob/main/charts/rampart/README.md)
+> · [`values.yaml`](https://github.com/penpalabs/rampart/blob/main/charts/rampart/values.yaml)
 
 ## Install
 

@@ -40,7 +40,7 @@ edition      = "2021"
 # for perf + diagnostic improvements without touching the MSRV floor.
 rust-version = "1.88"
 license      = "AGPL-3.0-or-later"
-repository   = "https://github.com/pen-pal/rampart"
+repository   = "https://github.com/penpalabs/rampart"
 
 [workspace.dependencies]
 # async runtime

@@ -1,6 +1,6 @@
 # Rampart Helm chart
 
-Deploy [Rampart](https://github.com/pen-pal/rampart) — self-hosted uptime
+Deploy [Rampart](https://github.com/penpalabs/rampart) — self-hosted uptime
 monitoring + observability — to Kubernetes. One stateless Deployment backed by
 your Postgres.
 

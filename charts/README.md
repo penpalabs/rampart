@@ -1,6 +1,6 @@
 # Rampart Helm Chart
 
-A Helm chart for deploying [Rampart](https://github.com/pen-pal/rampart) — the
+A Helm chart for deploying [Rampart](https://github.com/penpalabs/rampart) — the
 Rust-based status-page / incident service — onto Kubernetes.
 
 ## TL;DR

@@ -63,7 +63,7 @@ impl Channel for Honeybadger {
             notifier: Notifier {
                 name: "rampart",
                 version: env!("CARGO_PKG_VERSION"),
-                url: "https://github.com/pen-pal/rampart",
+                url: "https://github.com/penpalabs/rampart",
             },
             error: HbError {
                 class: "MonitorAlert",

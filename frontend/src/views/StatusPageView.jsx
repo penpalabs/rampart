@@ -835,7 +835,7 @@ export default function StatusPageView({ slug, byDomainHost }) {
 
         {/* ── Footer ───────────────────────────────────────────── */}
         <div className="footer">
-          <span>{t('statuspage.public.footer.powered_by')} <a href="https://github.com/pen-pal/rampart" target="_blank" rel="noreferrer">Rampart</a></span>
+          <span>{t('statuspage.public.footer.powered_by')} <a href="https://github.com/penpalabs/rampart" target="_blank" rel="noreferrer">Rampart</a></span>
           <span>{t('statuspage.public.footer.last_updated', { when: view.generated_at ? relative(toDate(view.generated_at)) : '—' })}</span>
         </div>
       </div>

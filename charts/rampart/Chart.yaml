@@ -10,9 +10,9 @@ version: 0.4.0
 # The Rampart release this chart's defaults target.
 appVersion: "0.9.0"
 kubeVersion: ">=1.23.0-0"
-home: https://github.com/pen-pal/rampart
+home: https://github.com/penpalabs/rampart
 sources:
-  - https://github.com/pen-pal/rampart
+  - https://github.com/penpalabs/rampart
 maintainers:
   - name: Manish Khadka
     email: unameme@proton.me
@@ -26,11 +26,11 @@ keywords:
   - sentry
   - self-hosted
   - rust
-icon: https://raw.githubusercontent.com/pen-pal/rampart/main/docs/assets/logo.svg
+icon: https://raw.githubusercontent.com/penpalabs/rampart/main/docs/assets/logo.svg
 annotations:
   artifacthub.io/license: AGPL-3.0-only
   artifacthub.io/links: |
     - name: Documentation
-      url: https://pen-pal.github.io/rampart/
+      url: https://penpalabs.github.io/rampart/
     - name: Source
-      url: https://github.com/pen-pal/rampart
+      url: https://github.com/penpalabs/rampart
