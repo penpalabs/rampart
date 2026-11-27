@@ -10,6 +10,13 @@ copyright: AGPL-3.0 · self-hosted, single-tenant, zero telemetry
 
 docs_dir: docs
 
+# Hackathon submission notes stay in the repo but off the public site (and
+# out of its search index / sitemap).
+exclude_docs: |
+  HACKATHON*.md
+  hackathon/
+  deploy/aws-vercel.md
+
 # Several docs intentionally link to repo-root files (CHANGELOG, README,
 # .github/*, backend sources) for the GitHub view — those live outside
 # docs_dir, so don't fail the strict site build over them. Nav/config
