@@ -69,7 +69,7 @@ app.use((req, res, next) => {
 let healthy = true;            // toggled by /admin/health
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // The monitored endpoint Rampart's FLAPPING http monitor hits. Returns 503 when
-// flipped down. A push-cron / the autodrive flips it to create real outages.
+// flipped down via /admin/health (frontend buttons, or verify.sh when it needs an episode).
 app.get('/api/ready', (_req, res) => {
   if (healthy) return res.json({ status: 'ok' });
   res.status(503).json({ status: 'unavailable' });
