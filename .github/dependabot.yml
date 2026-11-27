@@ -37,6 +37,8 @@ updates:
     directory: "/backend"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7   # let fresh releases age a week (supply-chain attacks are usually caught fast)
       day: monday
     open-pull-requests-limit: 5
     labels: ["dependencies", "area: backend"]
@@ -60,6 +62,8 @@ updates:
     directory: "/frontend"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7   # let fresh releases age a week (supply-chain attacks are usually caught fast)
       day: monday
     open-pull-requests-limit: 5
     labels: ["dependencies", "area: frontend"]
@@ -85,6 +89,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7   # let fresh releases age a week (supply-chain attacks are usually caught fast)
     open-pull-requests-limit: 3
     labels: ["dependencies", "area: ci"]
     commit-message:
@@ -98,6 +104,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7   # let fresh releases age a week (supply-chain attacks are usually caught fast)
     open-pull-requests-limit: 2
     labels: ["dependencies", "area: docker"]
     commit-message:

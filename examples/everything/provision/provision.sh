@@ -24,7 +24,8 @@ export MAILPIT_SMTP_PORT="${MAILPIT_SMTP_PORT:-1025}"
 export PUBLIC_BASE="${PUBLIC_BASE:-http://localhost:3000}"
 export SHARED="${SHARED_DIR:-/shared}"
 export CJ=/tmp/cj
-export HERE="$(cd "$(dirname "$0")" && pwd)"
+export HERE
+HERE="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$SHARED"
 log()  { echo "[provision] $*"; }
@@ -107,4 +108,4 @@ do
 done
 
 log "provisioning complete. Secrets written to $SHARED:"
-ls -1 "$SHARED" 2>/dev/null | sed 's/^/[provision]   /'
+for f in "$SHARED"/*; do [ -e "$f" ] && log "  ${f##*/}"; done

@@ -85,7 +85,7 @@ const sdk = new NodeSDK({
   resource,
   traceExporter: new OTLPTraceExporter({ url: BASE + '/v1/traces' }),
   logRecordProcessors: [
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: BASE + '/v1/logs' })),
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: BASE + '/v1/logs' }) }), // sdk-logs 3.x takes an options object
   ],
   instrumentations: [getNodeAutoInstrumentations()],
 });

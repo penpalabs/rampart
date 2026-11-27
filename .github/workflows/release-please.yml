@@ -25,9 +25,7 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: release-please
@@ -36,13 +34,16 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
       pr: ${{ steps.rp.outputs.pr }}
     steps:
       - id: rp
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
@@ -53,9 +54,12 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.pr && needs.release-please.outputs.release_created != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the Cargo.lock commit to the release PR branch
     steps:
-      - uses: actions/checkout@v6
-        with:
+      # Credentials must persist: the last step pushes. No artifacts are uploaded.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: # zizmor: ignore[artipacked]
           ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Set workspace crate versions in Cargo.lock
@@ -88,7 +92,7 @@ jobs:
   binaries:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
-    uses: ./.github/workflows/release.yml
+    uses: ./.github/workflows/release.yml # zizmor: ignore[self-repository] (actionlint lacks $/ support)
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
     permissions:
@@ -99,7 +103,7 @@ jobs:
   image:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
-    uses: ./.github/workflows/docker.yml
+    uses: ./.github/workflows/docker.yml # zizmor: ignore[self-repository] (actionlint lacks $/ support)
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
     permissions:
@@ -111,7 +115,7 @@ jobs:
   chart:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
-    uses: ./.github/workflows/helm.yml
+    uses: ./.github/workflows/helm.yml # zizmor: ignore[self-repository] (actionlint lacks $/ support)
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
     permissions:

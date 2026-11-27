@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 60-escalation-oncall-slo.sh — on-call schedule (short rotation) + escalation
 # policy bound to the flapping monitor, and a tight SLO on it.
 

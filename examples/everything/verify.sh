@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015  # pass() only prints and cannot fail, so `A && pass || fail` is safe
 # verify.sh — run this AFTER `docker compose up` has been live for a few minutes.
 # Asserts every tier is genuinely non-empty: monitors of many kinds, delivery-log
 # rows, an open episode, an incident from ingest, and traces/logs/metrics/rum/

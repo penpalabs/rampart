@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 20-tags-groups.sh — tags (for tag-routing) and monitor folders/groups.
 
 ensure_tag() {  # $1=name $2=color → echoes id
@@ -16,17 +17,26 @@ ensure_group() {  # $1=name [$2=parent_id] → echoes id
   post /v1/monitor-groups "$body" | jq -r '.id // empty'
 }
 
-export TAG_PROD="$(ensure_tag prod '#0d9488')"
-export TAG_EDGE="$(ensure_tag edge '#f59e0b')"
-export TAG_DATA="$(ensure_tag data '#6366f1')"
-export TAG_CRITICAL="$(ensure_tag critical '#ef4444')"
+export TAG_PROD
+TAG_PROD="$(ensure_tag prod '#0d9488')"
+export TAG_EDGE
+TAG_EDGE="$(ensure_tag edge '#f59e0b')"
+export TAG_DATA
+TAG_DATA="$(ensure_tag data '#6366f1')"
+export TAG_CRITICAL
+TAG_CRITICAL="$(ensure_tag critical '#ef4444')"
 log "tags: prod=$TAG_PROD edge=$TAG_EDGE data=$TAG_DATA critical=$TAG_CRITICAL"
 
-export GRP_CORE="$(ensure_group 'Core services')"
-export GRP_EDGE="$(ensure_group 'Edge')"
-export GRP_DATASTORES="$(ensure_group 'Datastores' "$GRP_CORE")"   # nested folder
-export GRP_NETWORK="$(ensure_group 'Network & protocols')"
-export GRP_HEAVY="$(ensure_group 'Heavy (profile)')"
+export GRP_CORE
+GRP_CORE="$(ensure_group 'Core services')"
+export GRP_EDGE
+GRP_EDGE="$(ensure_group 'Edge')"
+export GRP_DATASTORES
+GRP_DATASTORES="$(ensure_group 'Datastores' "$GRP_CORE")"   # nested folder
+export GRP_NETWORK
+GRP_NETWORK="$(ensure_group 'Network & protocols')"
+export GRP_HEAVY
+GRP_HEAVY="$(ensure_group 'Heavy (profile)')"
 log "groups: core=$GRP_CORE edge=$GRP_EDGE datastores=$GRP_DATASTORES network=$GRP_NETWORK heavy=$GRP_HEAVY"
 
 # persist for later sections (sourced env is in-process, but be explicit)

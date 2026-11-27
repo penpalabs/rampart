@@ -21,7 +21,7 @@ on:
       - charts/**
       - .github/workflows/helm.yml
     tags:
-      - "chart-v*"   # chart-only releases; app releases call this via workflow_call
+      - "chart-v*" # chart-only releases; app releases call this via workflow_call
   workflow_call:
     inputs:
       tag:
@@ -37,10 +37,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           ref: ${{ inputs.tag || github.ref }}
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         with:
           version: v3.16.3
       - name: helm lint
@@ -67,24 +68,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # push the OCI chart to ghcr.io
+      packages: write # push the OCI chart to ghcr.io
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           ref: ${{ inputs.tag || github.ref }}
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         with:
           version: v3.16.3
       - name: Log in to GHCR
-        run: helm registry login ghcr.io -u ${{ github.actor }} --password-stdin <<<"${{ secrets.GITHUB_TOKEN }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin <<<"$GH_TOKEN"
       - name: Package
         id: pkg
         run: |
           helm package charts/rampart --destination dist
           echo "tgz=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
       - name: Push to GHCR (OCI)
+        env:
+          TGZ: ${{ steps.pkg.outputs.tgz }}
         run: |
-          helm push "${{ steps.pkg.outputs.tgz }}" oci://ghcr.io/${{ github.repository_owner }}/charts
+          helm push "$TGZ" "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/charts"
       - name: Summary
         run: |
           ver=$(helm show chart charts/rampart | awk '/^version:/{print $2}')
@@ -92,6 +98,6 @@ jobs:
             echo "### Helm chart published 📦"
             echo ""
             echo '```'
-            echo "helm install rampart oci://ghcr.io/${{ github.repository_owner }}/charts/rampart --version ${ver}"
+            echo "helm install rampart oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/charts/rampart --version ${ver}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

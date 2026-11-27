@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 80-rules.sh — detection (SIEM), telemetry, and metric rules. These fire from
 # the REAL logs/traces/metrics the demo-app + metrics-pusher emit.
 

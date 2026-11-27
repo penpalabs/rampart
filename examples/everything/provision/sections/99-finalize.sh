@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # 99-finalize.sh — curl the captured profiling fixtures once so BOTH profile
 # formats genuinely hit (folded text is already pushed continuously by the app;
 # here we also push a captured pprof gzip and an OTLP-profiles protobuf), and

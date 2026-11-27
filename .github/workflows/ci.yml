@@ -24,7 +24,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_OFFLINE:     true
+  SQLX_OFFLINE: true
 
 jobs:
   # ─── BACKEND ────────────────────────────────────────────────────────────
@@ -34,10 +34,11 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with: { components: "rustfmt, clippy" }
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal -c rustfmt,clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
       # rampart-api embeds frontend/dist/ via rust-embed; the derive macro
       # errors at compile time if the folder is absent. This job doesn't
@@ -68,10 +69,11 @@ jobs:
     env:
       SQLX_OFFLINE: "1"
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with: { components: clippy }
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal -c clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
       # The api build below embeds frontend/dist/ via rust-embed, which errors at
       # compile time if the folder is absent (same stub as backend-lint).
@@ -113,10 +115,11 @@ jobs:
       # CREATE/DROP DATABASE), so the MySQL backend is exercised for real.
       DATABASE_URL: "mysql://root:rampart@127.0.0.1:3306/rampart_test"
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with: { components: clippy }
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal -c clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
       - name: clippy (mysql feature)
         run: cargo clippy -p rampart-db --features mysql --all-targets -- -D warnings
@@ -135,10 +138,10 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     rampart
+          POSTGRES_USER: rampart
           POSTGRES_PASSWORD: rampart
-          POSTGRES_DB:       rampart
-        ports: ['5432:5432']
+          POSTGRES_DB: rampart
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U rampart -d rampart"
           --health-interval 5s --health-timeout 3s --health-retries 10
@@ -150,9 +153,11 @@ jobs:
       DATABASE_URL: postgres://rampart:rampart@localhost:5432/rampart
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
       # rampart-api embeds frontend/dist/ via rust-embed; the derive macro
       # errors at compile time if the folder is absent. This job doesn't
@@ -167,7 +172,7 @@ jobs:
         # NOTE: we don't set SQLX_OFFLINE here — sqlx::test uses a live
         # base DB and creates per-test databases from it. Offline mode
         # would block test DB creation.
-        env: { SQLX_OFFLINE: '' }
+        env: { SQLX_OFFLINE: "" }
         run: cargo test --workspace --all-targets --no-fail-fast
 
   # ─── FRONTEND ───────────────────────────────────────────────────────────
@@ -177,8 +182,10 @@ jobs:
     defaults:
       run: { working-directory: frontend }
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20
           cache: npm
@@ -217,24 +224,26 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     rampart
+          POSTGRES_USER: rampart
           POSTGRES_PASSWORD: rampart
-          POSTGRES_DB:       rampart
-        ports: ['5432:5432']
+          POSTGRES_DB: rampart
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U rampart -d rampart"
           --health-interval 5s --health-timeout 3s --health-retries 10
 
     env:
-      RAMPART_PG_CONTAINER: ""   # see container-vs-host note below
+      RAMPART_PG_CONTAINER: "" # see container-vs-host note below
       DATABASE_URL: postgres://rampart:rampart@localhost:5432/rampart_test
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20
           cache: npm
@@ -300,7 +309,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-${{ matrix.browser }}
           path: frontend/playwright-report/

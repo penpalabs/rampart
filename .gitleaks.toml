@@ -1,0 +1,10 @@
+# gitleaks config, shared by the pre-commit hooks and the `security` workflow.
+# Default ruleset + narrow false-positive allowlists. Keep every allowlist
+# scoped to a rule AND a path; never allowlist a whole directory for all rules.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "UI translation strings (e.g. \"... API key\") trip generic-api-key"
+targetRules = ["generic-api-key"]
+paths = ['''^frontend/src/lib/i18n/[a-z]{2}\.js$''']

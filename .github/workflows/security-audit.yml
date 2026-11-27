@@ -23,7 +23,7 @@ on:
       - "backend/Cargo.lock"
       - "backend/deny.toml"
   schedule:
-    - cron: "0 5 * * 3"   # weekly, Wednesday 05:00 UTC — catches newly disclosed CVEs
+    - cron: "0 5 * * 3" # weekly, Wednesday 05:00 UTC — catches newly disclosed CVEs
   workflow_dispatch:
 
 permissions:
@@ -34,8 +34,10 @@ jobs:
     name: cargo deny (advisories + licenses + bans)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@81891abc19297b21343b15ef67dc61e4aea74fda # v2.1.4
         with:
           manifest-path: backend/Cargo.toml
           command: check

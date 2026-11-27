@@ -1,0 +1,82 @@
+# Security as code: the same scanners as the pre-commit hooks, plus Trivy, on every push / PR.
+# What each tool covers (and doesn't): docs/security-scanning.md
+# Actions are pinned to commit SHAs and images to digests (scripts/pin-ci.sh).
+# Every check's output is also shown on the run's Summary page (scripts/ci-summary.sh).
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ZIZMOR_VERSION: "1.33.1"
+  ACTIONLINT_PY_VERSION: "1.7.12.25" # PyPI package = actionlint 1.7.12 + build 25
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f # pinned by scripts/pin-ci.sh
+  TRIVY_IMAGE: ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb # pinned by scripts/pin-ci.sh
+
+jobs:
+  secrets:
+    name: Secrets (gitleaks, full history)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks
+        run: |
+          scripts/ci-summary.sh "gitleaks (full history)" docker run --rm \
+            --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" \
+            git /repo --redact --no-banner -v --config /repo/.gitleaks.toml
+
+  workflows:
+    name: GitHub Actions security (zizmor) + lint (actionlint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install zizmor + actionlint
+        run: pip install "zizmor==${ZIZMOR_VERSION}" "actionlint-py==${ACTIONLINT_PY_VERSION}"
+      - name: zizmor (online audits, e.g. impostor commits)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci-summary.sh "zizmor" zizmor .github
+      - name: actionlint
+        run: scripts/ci-summary.sh "actionlint" actionlint
+
+  trivy:
+    name: Trivy (misconfiguration)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Container image pinned by digest, NOT aquasecurity/trivy-action: in March 2026
+    # that action's version tags were force-pushed to credential-stealing code
+    # (CVE-2026-33634). See docs/security-scanning.md.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The chart refuses to render without a database setting, so pass a dummy one.
+      - name: trivy config
+        run: |
+          scripts/ci-summary.sh "Trivy config" docker run --rm -v "$PWD:/repo:ro" "$TRIVY_IMAGE" \
+            config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL \
+            --ignorefile /repo/.trivyignore \
+            --helm-set externalDatabase.url=postgres://u:p@db:5432/rampart \
+            /repo
