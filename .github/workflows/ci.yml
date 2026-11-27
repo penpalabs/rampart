@@ -24,7 +24,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_OFFLINE:     true
+  SQLX_OFFLINE: true
 
 jobs:
   # ─── BACKEND ────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ jobs:
     defaults:
       run: { working-directory: backend }
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal -c rustfmt,clippy && rustup default stable
@@ -69,7 +69,7 @@ jobs:
     env:
       SQLX_OFFLINE: "1"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal -c clippy && rustup default stable
@@ -115,7 +115,7 @@ jobs:
       # CREATE/DROP DATABASE), so the MySQL backend is exercised for real.
       DATABASE_URL: "mysql://root:rampart@127.0.0.1:3306/rampart_test"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal -c clippy && rustup default stable
@@ -138,10 +138,10 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     rampart
+          POSTGRES_USER: rampart
           POSTGRES_PASSWORD: rampart
-          POSTGRES_DB:       rampart
-        ports: ['5432:5432']
+          POSTGRES_DB: rampart
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U rampart -d rampart"
           --health-interval 5s --health-timeout 3s --health-retries 10
@@ -153,7 +153,7 @@ jobs:
       DATABASE_URL: postgres://rampart:rampart@localhost:5432/rampart
 
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal && rustup default stable
@@ -172,7 +172,7 @@ jobs:
         # NOTE: we don't set SQLX_OFFLINE here — sqlx::test uses a live
         # base DB and creates per-test databases from it. Offline mode
         # would block test DB creation.
-        env: { SQLX_OFFLINE: '' }
+        env: { SQLX_OFFLINE: "" }
         run: cargo test --workspace --all-targets --no-fail-fast
 
   # ─── FRONTEND ───────────────────────────────────────────────────────────
@@ -182,10 +182,10 @@ jobs:
     defaults:
       run: { working-directory: frontend }
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20
           cache: npm
@@ -224,26 +224,26 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     rampart
+          POSTGRES_USER: rampart
           POSTGRES_PASSWORD: rampart
-          POSTGRES_DB:       rampart
-        ports: ['5432:5432']
+          POSTGRES_DB: rampart
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U rampart -d rampart"
           --health-interval 5s --health-timeout 3s --health-retries 10
 
     env:
-      RAMPART_PG_CONTAINER: ""   # see container-vs-host note below
+      RAMPART_PG_CONTAINER: "" # see container-vs-host note below
       DATABASE_URL: postgres://rampart:rampart@localhost:5432/rampart_test
 
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal && rustup default stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: { workspaces: backend }
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20
           cache: npm

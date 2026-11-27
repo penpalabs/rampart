@@ -41,7 +41,7 @@ permissions: {}
 
 env:
   REGISTRY: ghcr.io
-  IMAGE:    ${{ github.repository }}
+  IMAGE: ${{ github.repository }}
 
 jobs:
   # ── per-arch builds in parallel ───────────────────────────────────
@@ -55,17 +55,17 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
-      packages: write   # push per-arch digests + buildcache
+      packages: write # push per-arch digests + buildcache
 
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - { tag: amd64,  arch: linux/amd64, runner: ubuntu-latest }
-          - { tag: arm64,  arch: linux/arm64, runner: ubuntu-24.04-arm }
+          - { tag: amd64, arch: linux/amd64, runner: ubuntu-latest }
+          - { tag: arm64, arch: linux/arm64, runner: ubuntu-24.04-arm }
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ inputs.tag || github.ref }}
@@ -91,16 +91,16 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file:    Dockerfile
+          file: Dockerfile
           platforms: ${{ matrix.platform.arch }}
           # Push by digest only; the merge job tags the final manifest.
           # Two separate buildcache refs so amd64 and arm64 prime
           # independently — otherwise the first finisher overwrites the
           # second's layer set and we get a full rebuild next time.
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          labels:  ${{ steps.meta.outputs.labels }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE }}:buildcache-${{ matrix.platform.tag }}
-          cache-to:   type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE }}:buildcache-${{ matrix.platform.tag }},mode=max
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE }}:buildcache-${{ matrix.platform.tag }},mode=max
           provenance: false
 
       - name: Export digest
@@ -111,7 +111,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digest-${{ matrix.platform.tag }}
           path: /tmp/digests/*
@@ -125,13 +125,13 @@ jobs:
     needs: [build]
     timeout-minutes: 10
     permissions:
-      packages:     write   # push the multi-arch manifest
-      id-token:     write   # keyless signing + attestations (Sigstore)
+      packages: write # push the multi-arch manifest
+      id-token: write # keyless signing + attestations (Sigstore)
       attestations: write
 
     steps:
       - name: Download digests
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: /tmp/digests
           pattern: digest-*
@@ -201,7 +201,7 @@ jobs:
       # Verify: gh attestation verify oci://ghcr.io/<owner>/<repo>:<version> -R <owner>/<repo>
       - name: Attest build provenance
         if: inputs.tag != ''
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.digest }}
@@ -219,7 +219,7 @@ jobs:
 
       - name: Attest SBOM
         if: inputs.tag != ''
-        uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2.4.0
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.digest }}
@@ -232,7 +232,7 @@ jobs:
       #   --certificate-oidc-issuer https://token.actions.githubusercontent.com
       - name: Install cosign
         if: inputs.tag != ''
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+        uses: sigstore/cosign-installer@881c63bd87e38389154debd8331404ce7ca8a3ab # v4.1.4
       - name: Sign image
         if: inputs.tag != ''
         env:
