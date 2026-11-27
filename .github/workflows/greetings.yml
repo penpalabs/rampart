@@ -14,6 +14,11 @@ permissions:
 
 jobs:
   greeting:
+    # Gate on GitHub's own author_association: first-interaction's history
+    # lookup greeted everyone (owner and bots included) on every PR.
+    if: >-
+      contains(fromJSON('["FIRST_TIME_CONTRIBUTOR","FIRST_TIMER"]'),
+               github.event.pull_request.author_association || github.event.issue.author_association)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
