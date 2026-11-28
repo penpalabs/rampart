@@ -170,6 +170,12 @@ docker compose build rampart
 docker compose up
 ```
 
+## Hosting a public read-only demo
+
+See [demo/README.md](demo/README.md): a compose overlay that puts the stack behind
+Caddy (automatic HTTPS, writes refused), adds a readonly visitor login and a
+nightly reset, with free-hosting steps.
+
 ## Layout
 
 ```
@@ -192,5 +198,6 @@ everything/
 ├── targets/                   # flaky HTTP + TLS (warn/expired cert) targets
 ├── agent/                     # remote agent, built from source
 ├── dex/                       # OIDC provider (oidc profile)
+├── demo/                      # public read-only demo overlay (Caddy, readonly login, nightly reset)
 └── fixtures/                  # captured pprof + OTLP-profiles protobufs (+ generator)
 ```

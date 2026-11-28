@@ -1,0 +1,12 @@
+# Public read-only demo. Caddy fetches the HTTPS certificate for DEMO_DOMAIN
+# automatically and refuses every write except signing in and out.
+{$DEMO_DOMAIN} {
+	@blocked {
+		not method GET HEAD OPTIONS
+		# Sign-in/out, plus Rampart's own RUM beacon so visitors' page views
+		# show up in the RUM tier (the nightly reset clears anything posted).
+		not path /v1/auth/login /v1/auth/logout /rum/v1/*
+	}
+	respond @blocked "Read-only demo" 403
+	reverse_proxy rampart:3000
+}

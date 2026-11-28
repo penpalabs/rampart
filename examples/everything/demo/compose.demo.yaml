@@ -1,0 +1,56 @@
+# Public read-only demo overlay for the everything stack. See demo/README.md.
+# Caddy is the only thing published; every other port is unpublished.
+# Needs Docker Compose >= 2.24.4 (for !reset).
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DEMO_DOMAIN: ${DEMO_DOMAIN:?set DEMO_DOMAIN in demo/.env}
+    volumes:
+      - ./demo/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Bind mount, not a named volume: survives the nightly `down -v`, so the
+      # certificate isn't re-issued every night (Let's Encrypt rate-limits that).
+      - ./demo/caddy-data:/data
+    depends_on: [rampart]
+
+  # On a server nobody keeps the demo app's page open, so drive the same
+  # traffic its autodrive does (traces, logs, errors, failed logins).
+  traffic:
+    image: curlimages/curl:8.11.1
+    restart: unless-stopped
+    depends_on: [demo-frontend]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        F=http://demo-frontend:8080; H='content-type: application/json'; n=0
+        while :; do
+          n=$$((n + 1)); id=$$((n % 4 + 1))
+          curl -s -o /dev/null $$F/api/products
+          curl -s -o /dev/null $$F/api/products/$$id
+          if [ $$((n % 2)) = 0 ]; then
+            curl -s -o /dev/null -X POST -H "$$H" -d "{\"productId\":$$id}" $$F/api/checkout
+          else
+            curl -s -o /dev/null -X POST -H "$$H" -d '{"user":"alice"}' $$F/api/login
+          fi
+          [ $$((n % 6)) = 0 ] && curl -s -o /dev/null $$F/api/boom
+          sleep 4
+        done
+
+  rampart:
+    ports: !reset []
+    environment:
+      RAMPART_ADMIN_PASSWORD: ${RAMPART_ADMIN_PASSWORD:?set RAMPART_ADMIN_PASSWORD in demo/.env}
+  provision:
+    environment:
+      RAMPART_ADMIN_PASSWORD: ${RAMPART_ADMIN_PASSWORD:?set RAMPART_ADMIN_PASSWORD in demo/.env}
+      PUBLIC_BASE: https://${DEMO_DOMAIN}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-viewer@rampart.local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-rampart-demo}
+  demo-frontend: { ports: !reset [] }
+  webhook-sink: { ports: !reset [] }
+  mailpit: { ports: !reset [] }
+  prometheus: { ports: !reset [] }
+  alertmanager: { ports: !reset [] }
+  dex: { ports: !reset [] }
