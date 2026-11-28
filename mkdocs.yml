@@ -93,6 +93,9 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/penpalabs/rampart
+    - icon: fontawesome/solid/mug-hot
+      link: https://buymemomo.com/pen-pal
+      name: Support Rampart
 
 nav:
   - Home: index.md
