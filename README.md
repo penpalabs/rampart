@@ -487,6 +487,7 @@ Please read [**CONTRIBUTING.md**](CONTRIBUTING.md) for guidelines on how to set 
 - 💬 **Need help?** Join our [Discord Server](https://discord.gg/rampart) or ask in [GitHub Discussions](https://github.com/penpalabs/rampart/discussions).
 - 📋 **What changed?** Read the [**CHANGELOG**](CHANGELOG.md) or browse [tagged releases](https://github.com/penpalabs/rampart/releases). Cutting a release is documented in [`docs/RELEASING.md`](docs/RELEASING.md).
 - 📜 **API reference?** [`docs/API.md`](docs/API.md) catalogues every endpoint surfaced by the binary, grouped by URL family with per-route source-file pointers.
+- ☕ **Like Rampart?** Support its development on [Buy Me Momo](https://buymemomo.com/pen-pal).
 
 ---
 
