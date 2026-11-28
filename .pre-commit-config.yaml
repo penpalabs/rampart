@@ -86,11 +86,11 @@ repos:
       - id: check-json
       - id: check-toml
       - id: check-yaml
-        args: [--allow-multiple-documents]
-        # Helm templates use Go template directives and mkdocs.yml uses
-        # !!python/name tags, both of which PyYAML rejects; `helm lint` and
-        # `mkdocs build --strict` validate them in CI instead.
-        exclude: ^(charts/.*/templates/.*\.ya?ml|mkdocs\.yml)$
+        # --unsafe: syntax-only parse, so custom tags (mkdocs' !!python/name,
+        # compose's !reset) pass. Helm templates use Go template directives,
+        # which aren't YAML at all; `helm lint` validates them in CI instead.
+        args: [--allow-multiple-documents, --unsafe]
+        exclude: ^charts/.*/templates/.*\.ya?ml$
       - id: check-merge-conflict
       - id: check-symlinks
       - id: detect-private-key
