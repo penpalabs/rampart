@@ -96,6 +96,7 @@ for s in \
   80-rules.sh \
   90-status-incidents-ingest.sh \
   95-orgs-keys-proxy-agent-misc.sh \
+  97-demo-user.sh \
   99-finalize.sh
 do
   if [ -f "$HERE/sections/$s" ]; then
